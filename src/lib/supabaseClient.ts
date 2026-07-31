@@ -18,6 +18,29 @@ export const supabase = isSupabaseConfigured
 
 const STORAGE_KEY = 'app_roteiros_locais';
 
+/**
+ * Sanitiza e separa estritamente a Unidade Curricular e o Tema do Roteiro
+ */
+function sanitizarCampoTexto(valor: string | undefined, tipo: 'disciplina' | 'tema'): string {
+  if (!valor) return tipo === 'disciplina' ? 'Geral' : 'Sem Tema';
+
+  let limpo = valor.trim();
+
+  if (tipo === 'disciplina') {
+    // Garante que a Unidade Curricular NÃO contenha "Tema da aula:" nem textos seguintes
+    limpo = limpo.split(/\s+(?:Tema\s+da\s+aula\s*:|Tema\s*:|Aula\s+Pr[áa]tica)/i)[0];
+  } else if (tipo === 'tema') {
+    // Garante que o Tema NÃO contenha "Aula Prática:", "COMPETÊNCIAS", etc.
+    limpo = limpo.split(/\s+(?:Aula\s+Pr[áa]tica\s*:|COMPET[ÊE]NCIAS|Unidade\s+Curricular\s*:)/i)[0];
+  }
+
+  return limpo
+    .replace(/^[\s:–-]+/, '')
+    .replace(/[\s:–-]+$/, '')
+    .replace(/\s+/g, ' ')
+    .trim() || (tipo === 'disciplina' ? 'Geral' : 'Sem Tema');
+}
+
 // Função utilitária para buscar todos os roteiros (Supabase DB ou Local/Mock)
 export async function buscarRoteiros(): Promise<Roteiro[]> {
   if (isSupabaseConfigured && supabase) {
@@ -33,11 +56,11 @@ export async function buscarRoteiros(): Promise<Roteiro[]> {
         return data.map((item: any) => ({
           id: item.id,
           titulo: item.titulo,
-          tema: item.tema,
+          tema: sanitizarCampoTexto(item.tema, 'tema'),
           curso: item.curso || 'Geral',
           tipoCurso: item.tipo_curso || 'Presencial',
           modeloComponente: item.modelo_componente || 'Básico',
-          disciplina: item.disciplina || 'Geral',
+          disciplina: sanitizarCampoTexto(item.disciplina, 'disciplina'),
           docente: item.docente || 'Não informado',
           tutor: item.tutor || item.docente || 'Não informado',
           descricao: item.descricao || '',
@@ -56,7 +79,11 @@ export async function buscarRoteiros(): Promise<Roteiro[]> {
   if (locais) {
     try {
       const parsed = JSON.parse(locais);
-      return [...parsed, ...MOCK_ROTEIROS];
+      return [...parsed, ...MOCK_ROTEIROS].map(item => ({
+        ...item,
+        tema: sanitizarCampoTexto(item.tema, 'tema'),
+        disciplina: sanitizarCampoTexto(item.disciplina, 'disciplina')
+      }));
     } catch (e) {
       return MOCK_ROTEIROS;
     }
@@ -116,10 +143,12 @@ export async function cadastrarRoteirosEmLote(
 
     const objetoRoteiro: Roteiro = {
       ...item.dados,
+      titulo: item.dados.titulo.trim(),
+      tema: sanitizarCampoTexto(item.dados.tema, 'tema'),
       curso: item.dados.curso || 'Geral',
       tipoCurso: item.dados.tipoCurso || 'Presencial',
       modeloComponente: item.dados.modeloComponente || 'Básico',
-      disciplina: item.dados.disciplina || 'Geral',
+      disciplina: sanitizarCampoTexto(item.dados.disciplina, 'disciplina'),
       docente: item.dados.docente || 'Não informado',
       id: `rot-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
       pdfUrl: finalPdfUrl,

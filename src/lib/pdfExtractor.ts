@@ -71,16 +71,16 @@ export async function extrairMetadadosDoPdf(file: File): Promise<ExtractedPdfMet
       textoTratado.match(/(?:disciplina|mat[ée]ria)\s*:\s*([^\n\r]+)/i);
 
     if (matchUnidade?.[1]) {
-      resultado.unidadeCurricular = isolarValorCampo(matchUnidade[1]);
+      resultado.unidadeCurricular = isolarUnidadeCurricular(matchUnidade[1]);
     }
 
     // 3. Extração do Tema da Aula
     const matchTema = 
-      textoTratado.match(/Tema\s*:\s*([^\n\r]+)/i) ||
-      textoTratado.match(/Tema\s+da\s+Aula\s*:\s*([^\n\r]+)/i);
+      textoTratado.match(/Tema\s+da\s+Aula\s*:\s*([^\n\r]+)/i) ||
+      textoTratado.match(/Tema\s*:\s*([^\n\r]+)/i);
 
     if (matchTema?.[1]) {
-      resultado.tema = isolarValorCampo(matchTema[1]);
+      resultado.tema = isolarTema(matchTema[1]);
     }
   }
 
@@ -122,14 +122,31 @@ function corrigirEspacosPDF(texto: string): string {
 }
 
 /**
- * Isola estritamente o valor do campo interrompendo assim que encontrar
- * delimitadores conhecidos de seções seguintes como "Tema:", "Aula Prática:", "COMPETÊNCIAS", etc.
+ * Isola a Unidade Curricular parando EXATAMENTE antes de "Tema:", "Tema da aula:", "Aula Prática:", etc.
  */
-function isolarValorCampo(textoBruto: string): string {
+function isolarUnidadeCurricular(textoBruto: string): string {
   if (!textoBruto) return '';
 
-  // Interrompe o texto antes de seções como "Tema:", "Aula Prática", "COMPETÊNCIAS", "Unidade Curricular:", etc.
-  const textoCortado = textoBruto.split(/\s+(?:Tema\s*:|Aula\s+Pr[áa]tica|COMPET[ÊE]NCIAS|Unidade\s+Curricular\s*:|OBJETIV|INTRODU|DESCRIT|MATERIA|EQUIPAM|PROCEDIM|1\.)/i)[0];
+  const textoCortado = textoBruto.split(/\s+(?:Tema\s+da\s+aula\s*:|Tema\s*:|Aula\s+Pr[áa]tica|COMPET[ÊE]NCIAS|OBJETIV|INTRODU|DESCRIT|1\.)/i)[0];
+
+  const resultado = textoCortado
+    .replace(/^[\s:–-]+/, '')
+    .replace(/[\s:–-]+$/, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  return corrigirEspacosPDF(resultado);
+}
+
+/**
+ * Isola o Tema da Aula Prática parando APENAS antes de seções como "Aula Prática:", "COMPETÊNCIAS", "OBJETIVOS", etc.
+ * NUNCA corta em "PROCEDIMENTO OPERACIONAL PADRÃO"!
+ */
+function isolarTema(textoBruto: string): string {
+  if (!textoBruto) return '';
+
+  // Interrompe apenas antes de delimitadores estritos de seções do roteiro
+  const textoCortado = textoBruto.split(/\s+(?:Aula\s+Pr[áa]tica\s*:|COMPET[ÊE]NCIAS|Unidade\s+Curricular\s*:|OBJETIVOS\s*:|INTRODU[ÇC][ÃA]O|DESCRITIVO\s+DA\s+AULA|MATERIAIS\s+E\s+EQUIPAMENTOS|PROCEDIMENTOS?\s+PR[ÁA]TICOS?|1\.)/i)[0];
 
   const resultado = textoCortado
     .replace(/^[\s:–-]+/, '')

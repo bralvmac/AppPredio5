@@ -291,7 +291,7 @@ const SubpastaModalidadeCard: React.FC<{
   );
 };
 
-// Linha Estilo Arquivo do Windows Explorer com Badges Coloridas Vibrantes
+// Linha Estilo Arquivo do Windows Explorer com Metadados Discriminados
 const ItemRoteiroArquivoRow: React.FC<{
   roteiro: Roteiro;
   onOpenPdf: (roteiro: Roteiro) => void;
@@ -346,8 +346,8 @@ const ItemRoteiroArquivoRow: React.FC<{
           <FileText className="w-4 h-4" />
         </div>
 
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2 mb-1">
+        <div className="min-w-0 flex-1 space-y-1">
+          <div className="flex flex-wrap items-center gap-2">
             <span className="text-xs sm:text-sm font-bold text-white group-hover:text-emerald-300 transition-colors line-clamp-1">
               {roteiro.titulo}
             </span>
@@ -364,14 +364,27 @@ const ItemRoteiroArquivoRow: React.FC<{
             )}
           </div>
 
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400">
-            <span><strong className="text-slate-300">Tema:</strong> {roteiro.tema}</span>
-            <span>•</span>
-            <span><strong className="text-slate-300">Unidade:</strong> {roteiro.disciplina}</span>
+          {/* Metadados Discriminados: Tema e Unidade Curricular */}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-xs text-slate-400">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <strong className="text-slate-300 font-bold shrink-0">Tema:</strong>
+              <span className="text-amber-300/90 font-medium truncate">{roteiro.tema}</span>
+            </div>
+
+            <span className="hidden sm:inline text-slate-700">•</span>
+
+            <div className="flex items-center gap-1.5 min-w-0">
+              <strong className="text-slate-300 font-bold shrink-0">Unidade Curricular:</strong>
+              <span className="text-emerald-300/90 font-medium truncate">{roteiro.disciplina}</span>
+            </div>
+
             {roteiro.docente && roteiro.docente !== 'Não informado' && (
               <>
-                <span>•</span>
-                <span><strong className="text-slate-300">Docente/Tutor:</strong> {roteiro.docente}</span>
+                <span className="hidden sm:inline text-slate-700">•</span>
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <strong className="text-slate-300 font-bold shrink-0">Docente/Tutor:</strong>
+                  <span className="text-slate-300 truncate">{roteiro.docente}</span>
+                </div>
               </>
             )}
           </div>
