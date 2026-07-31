@@ -18,7 +18,7 @@ export const supabase = isSupabaseConfigured
 
 const STORAGE_KEY = 'app_roteiros_locais';
 
-// Função utilitária para buscar todos os roteiros (Supabase ou Local/Mock)
+// Função utilitária para buscar todos os roteiros (Supabase DB ou Local/Mock)
 export async function buscarRoteiros(): Promise<Roteiro[]> {
   if (isSupabaseConfigured && supabase) {
     try {
@@ -29,7 +29,8 @@ export async function buscarRoteiros(): Promise<Roteiro[]> {
 
       if (error) throw error;
 
-      if (data && data.length > 0) {
+      // Se a consulta ao Supabase for bem-sucedida, retorna exatamente os dados do banco (mesmo se estiver vazio [])
+      if (data !== null) {
         return data.map((item: any) => ({
           id: item.id,
           titulo: item.titulo,
@@ -49,11 +50,11 @@ export async function buscarRoteiros(): Promise<Roteiro[]> {
         }));
       }
     } catch (err) {
-      console.warn("Supabase indisponível ou tabela não criada ainda. Usando armazenamento local.", err);
+      console.warn("Supabase com erro de consulta. Usando armazenamento local.", err);
     }
   }
 
-  // Fallback Local Storage + Mock Data
+  // Fallback se o Supabase não estiver configurado
   const locais = localStorage.getItem(STORAGE_KEY);
   if (locais) {
     try {
@@ -164,7 +165,7 @@ export async function cadastrarRoteiro(
     }
   }
 
-  // 3. Fallback Local Storage
+  // 3. Fallback Local Storage se não houver Supabase
   const locaisStr = localStorage.getItem(STORAGE_KEY);
   const locais = locaisStr ? JSON.parse(locaisStr) : [];
   locais.unshift(roteiroCriado);
