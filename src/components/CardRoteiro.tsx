@@ -56,14 +56,14 @@ export const CardRoteiro: React.FC<CardRoteiroProps> = ({
   const isBasico = roteiro.modeloComponente === 'Básico';
 
   return (
-    <div className="glass-panel-interactive rounded-2xl p-5 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/90 flex flex-col justify-between relative group hover:border-brand-500/40 transition-all duration-300 shadow-md dark:shadow-xl">
+    <div className="glass-panel-interactive rounded-2xl p-5 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col justify-between relative group hover:border-brand-500/40 transition-all duration-300 shadow-md dark:shadow-xl w-full overflow-hidden">
       
       {/* Topo do Card: Tags de Curso, Tipo e Modelo */}
       <div>
         <div className="flex flex-wrap items-center gap-2 mb-3">
           {roteiro.curso && (
             <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
-              <GraduationCap className="w-3.5 h-3.5 mr-1" />
+              <GraduationCap className="w-3.5 h-3.5 mr-1 shrink-0" />
               {roteiro.curso}
             </span>
           )}
@@ -74,7 +74,7 @@ export const CardRoteiro: React.FC<CardRoteiroProps> = ({
                 ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20'
                 : 'bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border-indigo-500/20'
             }`}>
-              <Building2 className="w-3.5 h-3.5 mr-1" />
+              <Building2 className="w-3.5 h-3.5 mr-1 shrink-0" />
               {roteiro.tipoCurso}
             </span>
           )}
@@ -85,7 +85,7 @@ export const CardRoteiro: React.FC<CardRoteiroProps> = ({
                 ? 'bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 border-cyan-500/20'
                 : 'bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/20'
             }`}>
-              <Layers className="w-3.5 h-3.5 mr-1" />
+              <Layers className="w-3.5 h-3.5 mr-1 shrink-0" />
               {roteiro.modeloComponente}
             </span>
           )}
@@ -102,34 +102,34 @@ export const CardRoteiro: React.FC<CardRoteiroProps> = ({
           </button>
         </div>
 
-        {/* Título e Tema do Roteiro */}
-        <h3 className="text-base font-extrabold text-slate-900 dark:text-white group-hover:text-brand-600 dark:group-hover:text-brand-300 transition-colors line-clamp-2 mb-1">
+        {/* Título e Tema do Roteiro - Texto Completo Sem Truncar */}
+        <h3 className="text-base font-extrabold text-slate-900 dark:text-white group-hover:text-brand-600 dark:group-hover:text-brand-300 transition-colors mb-2 break-words whitespace-normal leading-snug">
           {roteiro.titulo}
         </h3>
         
-        <p className="text-xs text-slate-600 dark:text-slate-400 mb-4 line-clamp-2">
-          <strong className="text-slate-900 dark:text-slate-300 font-bold">Tema:</strong>{' '}
-          <span className="text-amber-800 dark:text-amber-300 font-semibold">{roteiro.tema}</span>
-        </p>
+        <div className="text-xs text-slate-700 dark:text-slate-300 mb-4 break-words whitespace-normal">
+          <strong className="text-slate-950 dark:text-slate-100 font-extrabold">Tema:</strong>{' '}
+          <span className="text-amber-900 dark:text-amber-300 font-bold">{roteiro.tema}</span>
+        </div>
 
         {/* Informações detalhadas */}
         <div className="space-y-2 py-3 border-t border-slate-200 dark:border-slate-800/80 text-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-slate-600 dark:text-slate-400 flex items-center gap-1.5 font-medium">
-              <BookOpen className="w-3.5 h-3.5 text-emerald-600 dark:text-brand-400" />
+          <div className="flex flex-col gap-0.5">
+            <span className="text-slate-600 dark:text-slate-400 flex items-center gap-1.5 font-semibold">
+              <BookOpen className="w-3.5 h-3.5 text-emerald-600 dark:text-brand-400 shrink-0" />
               Unidade Curricular:
             </span>
-            <span className="font-bold text-emerald-800 dark:text-emerald-300 truncate max-w-[160px]" title={roteiro.disciplina}>
+            <span className="font-extrabold text-emerald-900 dark:text-emerald-300 break-words whitespace-normal pl-5">
               {roteiro.disciplina}
             </span>
           </div>
 
-          <div className="flex items-center justify-between">
-            <span className="text-slate-600 dark:text-slate-400 flex items-center gap-1.5 font-medium">
-              <User className="w-3.5 h-3.5 text-amber-600 dark:text-brand-400" />
+          <div className="flex flex-col gap-0.5 pt-1">
+            <span className="text-slate-600 dark:text-slate-400 flex items-center gap-1.5 font-semibold">
+              <User className="w-3.5 h-3.5 text-amber-600 dark:text-brand-400 shrink-0" />
               Docente / Tutor:
             </span>
-            <span className="font-semibold text-slate-800 dark:text-slate-200 truncate max-w-[160px]" title={roteiro.docente}>
+            <span className="font-bold text-slate-800 dark:text-slate-200 break-words whitespace-normal pl-5">
               {roteiro.docente}
             </span>
           </div>
@@ -140,7 +140,7 @@ export const CardRoteiro: React.FC<CardRoteiroProps> = ({
       <div className="pt-4 mt-2 border-t border-slate-200 dark:border-slate-800/80 flex items-center gap-2">
         <button
           onClick={() => onOpenPdf(roteiro)}
-          className="flex-1 inline-flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold text-slate-950 bg-gradient-to-r from-brand-500 to-teal-400 hover:from-brand-400 hover:to-teal-300 transition-all shadow-md shadow-brand-500/10 cursor-pointer"
+          className="flex-1 inline-flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-extrabold text-slate-950 bg-gradient-to-r from-brand-500 to-teal-400 hover:from-brand-400 hover:to-teal-300 transition-all shadow-md shadow-brand-500/10 cursor-pointer"
         >
           <Eye className="w-4 h-4 stroke-[2.5]" />
           <span>Visualizar</span>
@@ -149,7 +149,7 @@ export const CardRoteiro: React.FC<CardRoteiroProps> = ({
         {/* WhatsApp Share */}
         <button
           onClick={handleCompartilharWhatsApp}
-          className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 transition-colors cursor-pointer"
+          className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/20 transition-colors cursor-pointer"
           title="Compartilhar no WhatsApp"
         >
           <MessageCircle className="w-4 h-4" />
