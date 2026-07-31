@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Folder, FolderOpen, ChevronRight, ChevronDown, FileText, Eye, Download, Share2, Trash2, Check, AlertTriangle, Building2 } from 'lucide-react';
+import { Folder, FolderOpen, ChevronRight, ChevronDown, FileText, Eye, Download, Share2, Trash2, Check, AlertTriangle, Building2, Loader2 } from 'lucide-react';
 import { Roteiro } from '../types/roteiro';
+import { baixarPdfRoteiro } from '../lib/downloadHelper';
 
 interface PastaRoteirosViewProps {
   roteiros: Roteiro[];
@@ -160,6 +161,7 @@ const ItemRoteiroArquivoRow: React.FC<{
   onDeletar: (id: string, arquivoPath?: string) => void;
 }> = ({ roteiro, onOpenPdf, onDeletar }) => {
   const [copiado, setCopiado] = useState(false);
+  const [baixando, setBaixando] = useState(false);
   const [confirmandoExclusao, setConfirmandoExclusao] = useState(false);
   const [excluindo, setExcluindo] = useState(false);
 
@@ -168,6 +170,16 @@ const ItemRoteiroArquivoRow: React.FC<{
     navigator.clipboard.writeText(roteiro.pdfUrl);
     setCopiado(true);
     setTimeout(() => setCopiado(false), 2000);
+  };
+
+  const handleBaixarPdf = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      setBaixando(true);
+      await baixarPdfRoteiro(roteiro.pdfUrl, roteiro.titulo);
+    } finally {
+      setBaixando(false);
+    }
   };
 
   const handleConfirmarExclusao = async (e: React.MouseEvent) => {
@@ -247,16 +259,14 @@ const ItemRoteiroArquivoRow: React.FC<{
           <span>Visualizar</span>
         </button>
 
-        <a
-          href={roteiro.pdfUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={(e) => e.stopPropagation()}
-          className="p-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:text-white transition-colors"
+        <button
+          onClick={handleBaixarPdf}
+          disabled={baixando}
+          className="p-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:text-white transition-colors disabled:opacity-50"
           title="Baixar PDF"
         >
-          <Download className="w-3.5 h-3.5" />
-        </a>
+          {baixando ? <Loader2 className="w-3.5 h-3.5 animate-spin text-brand-400" /> : <Download className="w-3.5 h-3.5" />}
+        </button>
 
         <button
           onClick={handleCopiarLink}
