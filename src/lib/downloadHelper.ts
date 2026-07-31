@@ -1,6 +1,7 @@
+import { Roteiro } from '../types/roteiro';
+
 /**
- * Força o download direto de um arquivo PDF no navegador com o nome especificado,
- * contornando restrições de abertura em nova aba.
+ * Força o download direto de um arquivo PDF no navegador com o nome especificado.
  */
 export async function baixarPdfRoteiro(url: string, tituloRoteiro: string): Promise<void> {
   if (!url) return;
@@ -39,4 +40,23 @@ export async function baixarPdfRoteiro(url: string, tituloRoteiro: string): Prom
     link.click();
     document.body.removeChild(link);
   }
+}
+
+/**
+ * Abre o WhatsApp (Web ou App Mobile) com os metadados do roteiro e o link do PDF pré-formatados.
+ */
+export function compartilharNoWhatsApp(roteiro: Roteiro): void {
+  if (!roteiro) return;
+
+  const mensagem = 
+    `🧪 *Roteiro de Aula Prática*\n\n` +
+    `📌 *Título:* ${roteiro.titulo}\n` +
+    `🎯 *Tema:* ${roteiro.tema}\n` +
+    `📖 *Unidade Curricular:* ${roteiro.disciplina}\n` +
+    `🎓 *Curso:* ${roteiro.curso} (${roteiro.tipoCurso || 'Presencial'})\n` +
+    (roteiro.docente && roteiro.docente !== 'Não informado' ? `👨‍🏫 *Docente/Tutor:* ${roteiro.docente}\n` : '') +
+    `\n📄 *Acesse ou baixe o PDF do Roteiro aqui:* \n${roteiro.pdfUrl}`;
+
+  const urlWhatsApp = `https://api.whatsapp.com/send?text=${encodeURIComponent(mensagem)}`;
+  window.open(urlWhatsApp, '_blank');
 }

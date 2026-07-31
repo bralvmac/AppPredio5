@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { X, Download, Share2, ExternalLink, Check, FileText, GraduationCap, Building2, Layers, BookOpen, User, Loader2 } from 'lucide-react';
+import { X, Download, Share2, ExternalLink, Check, FileText, GraduationCap, Building2, Layers, BookOpen, User, Loader2, MessageCircle } from 'lucide-react';
 import { Roteiro } from '../types/roteiro';
-import { baixarPdfRoteiro } from '../lib/downloadHelper';
+import { baixarPdfRoteiro, compartilharNoWhatsApp } from '../lib/downloadHelper';
 
 interface PdfModalViewerProps {
   roteiro: Roteiro | null;
@@ -27,6 +27,10 @@ export const PdfModalViewer: React.FC<PdfModalViewerProps> = ({ roteiro, onClose
     } finally {
       setBaixando(false);
     }
+  };
+
+  const handleCompartilharWhatsApp = () => {
+    compartilharNoWhatsApp(roteiro);
   };
 
   return (
@@ -55,6 +59,16 @@ export const PdfModalViewer: React.FC<PdfModalViewerProps> = ({ roteiro, onClose
           {/* Ações do Cabeçalho */}
           <div className="flex items-center gap-2 shrink-0">
             
+            {/* Botão Compartilhar WhatsApp */}
+            <button
+              onClick={handleCompartilharWhatsApp}
+              className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 hover:text-emerald-300 text-xs font-bold transition-all"
+              title="Compartilhar no WhatsApp"
+            >
+              <MessageCircle className="w-4 h-4" />
+              <span className="hidden md:inline">WhatsApp</span>
+            </button>
+
             {/* Botão Baixar PDF */}
             <button
               onClick={handleBaixarPdf}

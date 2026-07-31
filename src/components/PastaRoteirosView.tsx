@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Folder, FolderOpen, ChevronRight, ChevronDown, FileText, Eye, Download, Share2, Trash2, Check, AlertTriangle, Building2, Laptop, Loader2 } from 'lucide-react';
+import { Folder, FolderOpen, ChevronRight, ChevronDown, FileText, Eye, Download, Share2, Trash2, Check, AlertTriangle, Building2, Laptop, Loader2, MessageCircle } from 'lucide-react';
 import { Roteiro } from '../types/roteiro';
-import { baixarPdfRoteiro } from '../lib/downloadHelper';
+import { baixarPdfRoteiro, compartilharNoWhatsApp } from '../lib/downloadHelper';
 
 interface PastaRoteirosViewProps {
   roteiros: Roteiro[];
@@ -319,6 +319,11 @@ const ItemRoteiroArquivoRow: React.FC<{
     }
   };
 
+  const handleCompartilharWhatsApp = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    compartilharNoWhatsApp(roteiro);
+  };
+
   const handleConfirmarExclusao = async (e: React.MouseEvent) => {
     e.stopPropagation();
     try {
@@ -374,7 +379,9 @@ const ItemRoteiroArquivoRow: React.FC<{
       </div>
 
       {/* Ações Rápidas */}
-      <div className="flex items-center gap-2 w-full sm:w-auto justify-end pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-800/60">
+      <div className="flex items-center gap-1.5 sm:gap-2 w-full sm:w-auto justify-end pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-800/60">
+        
+        {/* Visualizar PDF */}
         <button
           onClick={() => onOpenPdf(roteiro)}
           className="inline-flex items-center justify-center px-3 py-1.5 rounded-lg text-xs font-bold text-slate-950 bg-gradient-to-r from-emerald-400 to-teal-400 hover:from-emerald-300 hover:to-teal-300 transition-colors shadow-sm"
@@ -383,6 +390,16 @@ const ItemRoteiroArquivoRow: React.FC<{
           <span>Visualizar</span>
         </button>
 
+        {/* Compartilhar WhatsApp */}
+        <button
+          onClick={handleCompartilharWhatsApp}
+          className="p-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 hover:text-emerald-300 transition-colors"
+          title="Compartilhar no WhatsApp"
+        >
+          <MessageCircle className="w-3.5 h-3.5" />
+        </button>
+
+        {/* Baixar PDF */}
         <button
           onClick={handleBaixarPdf}
           disabled={baixando}
@@ -392,6 +409,7 @@ const ItemRoteiroArquivoRow: React.FC<{
           {baixando ? <Loader2 className="w-3.5 h-3.5 animate-spin text-brand-400" /> : <Download className="w-3.5 h-3.5" />}
         </button>
 
+        {/* Copiar Link */}
         <button
           onClick={handleCopiarLink}
           className="p-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:text-white transition-colors"
@@ -400,6 +418,7 @@ const ItemRoteiroArquivoRow: React.FC<{
           {copiado ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Share2 className="w-3.5 h-3.5" />}
         </button>
 
+        {/* Excluir Roteiro */}
         <button
           onClick={(e) => {
             e.stopPropagation();

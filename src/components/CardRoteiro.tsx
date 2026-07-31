@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Eye, Download, Share2, Trash2, Check, AlertTriangle, BookOpen, GraduationCap, User, Layers, Building2, Loader2 } from 'lucide-react';
+import { Eye, Download, Share2, Trash2, Check, AlertTriangle, BookOpen, GraduationCap, User, Layers, Building2, Loader2, MessageCircle } from 'lucide-react';
 import { Roteiro } from '../types/roteiro';
-import { baixarPdfRoteiro } from '../lib/downloadHelper';
+import { baixarPdfRoteiro, compartilharNoWhatsApp } from '../lib/downloadHelper';
 
 interface CardRoteiroProps {
   roteiro: Roteiro;
@@ -34,6 +34,11 @@ export const CardRoteiro: React.FC<CardRoteiroProps> = ({
     } finally {
       setBaixando(false);
     }
+  };
+
+  const handleCompartilharWhatsApp = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    compartilharNoWhatsApp(roteiro);
   };
 
   const handleConfirmarExclusao = async (e: React.MouseEvent) => {
@@ -134,12 +139,22 @@ export const CardRoteiro: React.FC<CardRoteiroProps> = ({
       <div className="pt-4 mt-2 border-t border-slate-800/80 flex items-center gap-2">
         <button
           onClick={() => onOpenPdf(roteiro)}
-          className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold text-slate-950 bg-gradient-to-r from-brand-500 to-teal-400 hover:from-brand-400 hover:to-teal-300 transition-all shadow-md shadow-brand-500/10 cursor-pointer"
+          className="flex-1 inline-flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold text-slate-950 bg-gradient-to-r from-brand-500 to-teal-400 hover:from-brand-400 hover:to-teal-300 transition-all shadow-md shadow-brand-500/10 cursor-pointer"
         >
           <Eye className="w-4 h-4 stroke-[2.5]" />
-          <span>Visualizar Roteiro</span>
+          <span>Visualizar</span>
         </button>
 
+        {/* WhatsApp Share */}
+        <button
+          onClick={handleCompartilharWhatsApp}
+          className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 hover:text-emerald-300 transition-colors cursor-pointer"
+          title="Compartilhar no WhatsApp"
+        >
+          <MessageCircle className="w-4 h-4" />
+        </button>
+
+        {/* Baixar PDF */}
         <button
           onClick={handleBaixarPdf}
           disabled={baixando}
@@ -149,6 +164,7 @@ export const CardRoteiro: React.FC<CardRoteiroProps> = ({
           {baixando ? <Loader2 className="w-4 h-4 animate-spin text-brand-400" /> : <Download className="w-4 h-4" />}
         </button>
 
+        {/* Copiar Link */}
         <button
           onClick={handleCopiarLink}
           className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-white transition-colors cursor-pointer"
