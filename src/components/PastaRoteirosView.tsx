@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Folder, FolderOpen, ChevronRight, ChevronDown, FileText, Eye, Download, Share2, Trash2, Check, AlertTriangle, Building2, Laptop, Loader2 } from 'lucide-react';
-import { Roteiro, TipoCurso } from '../types/roteiro';
+import { Roteiro } from '../types/roteiro';
 import { baixarPdfRoteiro } from '../lib/downloadHelper';
 
 interface PastaRoteirosViewProps {
@@ -51,21 +51,21 @@ export const PastaRoteirosView: React.FC<PastaRoteirosViewProps> = ({
     return cursosMap;
   }, [roteiros]);
 
-  // Estado de Abertura das Pastas Principais (Cursos) e Subpastas (Modalidades)
+  // Estado de Abertura das Pastas Principais (Cursos) e Subpastas - RECOLHIDAS POR PADRÃO
   const [pastasCursoAbertas, setPastasCursoAbertas] = useState<{ [curso: string]: boolean }>({});
   const [subpastasAbertas, setSubpastasAbertas] = useState<{ [key: string]: boolean }>({});
 
   const togglePastaCurso = (curso: string) => {
     setPastasCursoAbertas(prev => ({
       ...prev,
-      [curso]: prev[curso] === undefined ? false : !prev[curso]
+      [curso]: !prev[curso]
     }));
   };
 
   const toggleSubpasta = (chaveSubpasta: string) => {
     setSubpastasAbertas(prev => ({
       ...prev,
-      [chaveSubpasta]: prev[chaveSubpasta] === undefined ? false : !prev[chaveSubpasta]
+      [chaveSubpasta]: !prev[chaveSubpasta]
     }));
   };
 
@@ -84,17 +84,8 @@ export const PastaRoteirosView: React.FC<PastaRoteirosViewProps> = ({
   };
 
   const recolherTodas = () => {
-    const estadoCurso: { [curso: string]: boolean } = {};
-    const estadoSub: { [key: string]: boolean } = {};
-
-    Object.keys(hierarquiaCursos).forEach(c => {
-      estadoCurso[c] = false;
-      estadoSub[`${c}-Presencial`] = false;
-      estadoSub[`${c}-Semi-presencial`] = false;
-    });
-
-    setPastasCursoAbertas(estadoCurso);
-    setSubpastasAbertas(estadoSub);
+    setPastasCursoAbertas({});
+    setSubpastasAbertas({});
   };
 
   const listaCursos = Object.keys(hierarquiaCursos).sort((a, b) => a.localeCompare(b, 'pt-BR'));
@@ -125,7 +116,7 @@ export const PastaRoteirosView: React.FC<PastaRoteirosViewProps> = ({
         </div>
       </div>
 
-      {/* Lista de Pastas Raiz (Cursos) */}
+      {/* Lista de Pastas Raiz (Cursos) - RECOLHIDAS POR PADRÃO */}
       <div className="space-y-3.5">
         {listaCursos.map((cursoNome) => {
           const subpastas = hierarquiaCursos[cursoNome];
@@ -133,7 +124,7 @@ export const PastaRoteirosView: React.FC<PastaRoteirosViewProps> = ({
           const totalSemi = subpastas['Semi-presencial'].length;
           const totalGeral = totalPresencial + totalSemi;
 
-          const cursoAberto = pastasCursoAbertas[cursoNome] !== false;
+          const cursoAberto = Boolean(pastasCursoAbertas[cursoNome]);
 
           return (
             <div
@@ -186,7 +177,7 @@ export const PastaRoteirosView: React.FC<PastaRoteirosViewProps> = ({
                       icone={<Building2 className="w-4 h-4 text-amber-400" />}
                       corTag="amber"
                       roteiros={subpastas['Presencial']}
-                      estaAberta={subpastasAbertas[`${cursoNome}-Presencial`] !== false}
+                      estaAberta={Boolean(subpastasAbertas[`${cursoNome}-Presencial`])}
                       onToggle={() => toggleSubpasta(`${cursoNome}-Presencial`)}
                       onOpenPdf={onOpenPdf}
                       onDeletar={onDeletar}
@@ -201,7 +192,7 @@ export const PastaRoteirosView: React.FC<PastaRoteirosViewProps> = ({
                       icone={<Laptop className="w-4 h-4 text-indigo-400" />}
                       corTag="indigo"
                       roteiros={subpastas['Semi-presencial']}
-                      estaAberta={subpastasAbertas[`${cursoNome}-Semi-presencial`] !== false}
+                      estaAberta={Boolean(subpastasAbertas[`${cursoNome}-Semi-presencial`])}
                       onToggle={() => toggleSubpasta(`${cursoNome}-Semi-presencial`)}
                       onOpenPdf={onOpenPdf}
                       onDeletar={onDeletar}
