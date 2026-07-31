@@ -6,8 +6,8 @@ import { PdfModalViewer } from './components/PdfModalViewer';
 import { UploadModal } from './components/UploadModal';
 import { StatsBanner } from './components/StatsBanner';
 import { Roteiro, FiltrosState, OpcoesFiltros } from './types/roteiro';
-import { buscarRoteiros } from './lib/supabaseClient';
-import { SearchX, Loader2, Sparkles } from 'lucide-react';
+import { buscarRoteiros, deletarRoteiro } from './lib/supabaseClient';
+import { SearchX, Loader2 } from 'lucide-react';
 
 export const App: React.FC = () => {
   const [roteiros, setRoteiros] = useState<Roteiro[]>([]);
@@ -122,6 +122,11 @@ export const App: React.FC = () => {
     setRoteiros(prev => [novo, ...prev]);
   };
 
+  const handleDeletarRoteiro = async (id: string, arquivoPath?: string) => {
+    await deletarRoteiro(id, arquivoPath);
+    setRoteiros(prev => prev.filter(r => r.id !== id));
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col bg-glow-radial">
       
@@ -173,6 +178,7 @@ export const App: React.FC = () => {
                 key={roteiro.id}
                 roteiro={roteiro}
                 onOpenPdf={setRoteiroSelecionado}
+                onDeletar={handleDeletarRoteiro}
               />
             ))}
           </div>

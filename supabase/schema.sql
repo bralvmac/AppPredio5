@@ -29,7 +29,7 @@ CREATE INDEX IF NOT EXISTS idx_roteiros_disciplina ON public.roteiros(disciplina
 CREATE INDEX IF NOT EXISTS idx_roteiros_docente ON public.roteiros(docente);
 CREATE INDEX IF NOT EXISTS idx_roteiros_tutor ON public.roteiros(tutor);
 
--- 3. Habilita RLS (Row Level Security) com Acesso Público de Leitura
+-- 3. Habilita RLS (Row Level Security) com Acesso Público de Leitura, Inserção e Deleção
 ALTER TABLE public.roteiros ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Permitir leitura publica de roteiros"
@@ -39,6 +39,10 @@ USING (true);
 CREATE POLICY "Permitir insercao de roteiros"
 ON public.roteiros FOR INSERT
 WITH CHECK (true);
+
+CREATE POLICY "Permitir delecao de roteiros"
+ON public.roteiros FOR DELETE
+USING (true);
 
 -- 4. Inserção de Dados Iniciais de Demonstração
 INSERT INTO public.roteiros (titulo, tema, curso, tipo_curso, modelo_componente, disciplina, docente, tutor, descricao, pdf_url, duracao_minutos, laboratorio_tipo)
@@ -101,3 +105,7 @@ USING (bucket_id = 'roteiros-pdf');
 CREATE POLICY "Permitir Upload de PDFs"
 ON storage.objects FOR INSERT
 WITH CHECK (bucket_id = 'roteiros-pdf');
+
+CREATE POLICY "Permitir Delecao de PDFs"
+ON storage.objects FOR DELETE
+USING (bucket_id = 'roteiros-pdf');

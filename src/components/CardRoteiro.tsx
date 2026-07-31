@@ -1,20 +1,34 @@
-import React from 'react';
-import { Eye, Download, FileText, GraduationCap, User, UserCheck, Clock, Building2, ExternalLink, Share2, Check } from 'lucide-react';
+import React, { useState } from 'react';
+import { Eye, Download, FileText, GraduationCap, User, UserCheck, Clock, Building2, Share2, Check, Trash2, AlertTriangle } from 'lucide-react';
 import { Roteiro } from '../types/roteiro';
 
 interface CardRoteiroProps {
   roteiro: Roteiro;
   onOpenPdf: (roteiro: Roteiro) => void;
+  onDeletar: (id: string, arquivoPath?: string) => void;
 }
 
-export const CardRoteiro: React.FC<CardRoteiroProps> = ({ roteiro, onOpenPdf }) => {
-  const [copiado, setCopiado] = React.useState(false);
+export const CardRoteiro: React.FC<CardRoteiroProps> = ({ roteiro, onOpenPdf, onDeletar }) => {
+  const [copiado, setCopiado] = useState(false);
+  const [confirmandoExclusao, setConfirmandoExclusao] = useState(false);
+  const [excluindo, setExcluindo] = useState(false);
 
   const handleCopiarLink = (e: React.MouseEvent) => {
     e.stopPropagation();
     navigator.clipboard.writeText(roteiro.pdfUrl);
     setCopiado(true);
     setTimeout(() => setCopiado(false), 2000);
+  };
+
+  const handleConfirmarExclusao = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      setExcluindo(true);
+      await onDeletar(roteiro.id, roteiro.arquivoPath);
+    } finally {
+      setExcluindo(false);
+      setConfirmandoExclusao(false);
+    }
   };
 
   const isPresencial = roteiro.tipoCurso === 'Presencial';
@@ -24,34 +38,46 @@ export const CardRoteiro: React.FC<CardRoteiroProps> = ({ roteiro, onOpenPdf }) 
     <div className="glass-panel glass-panel-hover rounded-2xl p-5 sm:p-6 flex flex-col justify-between group transition-all duration-300 relative border border-slate-800/80">
       
       <div>
-        {/* Badges de Categoria & Modalidade */}
-        <div className="flex flex-wrap items-center gap-2 mb-3.5">
-          
-          {/* Badge Curso */}
-          <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-            <GraduationCap className="w-3.5 h-3.5 mr-1" />
-            {roteiro.curso}
-          </span>
+        {/* Linha Superior: Badges + Botão Excluir */}
+        <div className="flex items-start justify-between gap-2 mb-3.5">
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Badge Curso */}
+            <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+              <GraduationCap className="w-3.5 h-3.5 mr-1" />
+              {roteiro.curso}
+            </span>
 
-          {/* Badge Tipo de Curso (Presencial x Semi-presencial) */}
-          <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium border ${
-            isPresencial
-              ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
-              : 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20'
-          }`}>
-            <Building2 className="w-3 h-3 mr-1" />
-            {roteiro.tipoCurso}
-          </span>
+            {/* Badge Tipo de Curso (Presencial x Semi-presencial) */}
+            <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium border ${
+              isPresencial
+                ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                : 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20'
+            }`}>
+              <Building2 className="w-3 h-3 mr-1" />
+              {roteiro.tipoCurso}
+            </span>
 
-          {/* Badge Modelo Componente (Básico x Específico) */}
-          <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium border ${
-            isBasico
-              ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20'
-              : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
-          }`}>
-            {roteiro.modeloComponente}
-          </span>
+            {/* Badge Modelo Componente (Básico x Específico) */}
+            <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium border ${
+              isBasico
+                ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20'
+                : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+            }`}>
+              {roteiro.modeloComponente}
+            </span>
+          </div>
 
+          {/* Botão de Lixeira para Excluir */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setConfirmandoExclusao(true);
+            }}
+            className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors opacity-75 group-hover:opacity-100"
+            title="Excluir este roteiro"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
         </div>
 
         {/* Título do Roteiro */}
@@ -139,6 +165,38 @@ export const CardRoteiro: React.FC<CardRoteiroProps> = ({ roteiro, onOpenPdf }) 
         </button>
 
       </div>
+
+      {/* Modal / Popover de Confirmação de Exclusão */}
+      {confirmandoExclusao && (
+        <div 
+          className="absolute inset-0 z-20 bg-slate-950/95 backdrop-blur-md rounded-2xl p-5 flex flex-col justify-center items-center text-center animate-fade-in border border-rose-500/30"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="w-10 h-10 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-400 flex items-center justify-center mb-2">
+            <AlertTriangle className="w-5 h-5" />
+          </div>
+          <h4 className="text-sm font-bold text-white mb-1">Excluir este roteiro?</h4>
+          <p className="text-xs text-slate-400 mb-4 px-2 line-clamp-2">
+            "{roteiro.titulo}"
+          </p>
+
+          <div className="flex items-center gap-2 w-full">
+            <button
+              onClick={() => setConfirmandoExclusao(false)}
+              className="flex-1 py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              onClick={handleConfirmarExclusao}
+              disabled={excluindo}
+              className="flex-1 py-2 px-3 rounded-xl bg-rose-500 hover:bg-rose-400 text-white text-xs font-bold transition-colors disabled:opacity-50"
+            >
+              {excluindo ? 'Excluindo...' : 'Confirmar'}
+            </button>
+          </div>
+        </div>
+      )}
 
     </div>
   );

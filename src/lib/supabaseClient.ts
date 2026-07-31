@@ -172,3 +172,45 @@ export async function cadastrarRoteiro(
 
   return roteiroCriado;
 }
+
+// Função utilitária para excluir roteiro (do Supabase DB, Storage e LocalStorage)
+export async function deletarRoteiro(id: string, arquivoPath?: string): Promise<boolean> {
+  let excluidoNoSupabase = false;
+
+  if (isSupabaseConfigured && supabase) {
+    try {
+      // Deleta do Banco de Dados
+      const { error: dbError } = await supabase
+        .from('roteiros')
+        .delete()
+        .eq('id', id);
+
+      if (dbError) {
+        console.error("Erro ao excluir roteiro do banco Supabase:", dbError);
+      } else {
+        excluidoNoSupabase = true;
+      }
+
+      // Deleta o PDF do Storage se houver caminho do arquivo
+      if (arquivoPath) {
+        await supabase.storage.from('roteiros-pdf').remove([arquivoPath]);
+      }
+    } catch (err) {
+      console.warn("Erro durante exclusão no Supabase:", err);
+    }
+  }
+
+  // Sempre remove também do LocalStorage para manter a sincronia
+  const locaisStr = localStorage.getItem(STORAGE_KEY);
+  if (locaisStr) {
+    try {
+      const locais: Roteiro[] = JSON.parse(locaisStr);
+      const novosLocais = locais.filter(r => r.id !== id);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(novosLocais));
+    } catch (e) {
+      console.error("Erro ao atualizar LocalStorage após deleção:", e);
+    }
+  }
+
+  return true;
+}
