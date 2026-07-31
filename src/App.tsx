@@ -10,7 +10,6 @@ import { SearchX, Loader2, FolderTree, LayoutGrid } from 'lucide-react';
 
 /**
  * Remove acentos, diacríticos e converte para minúsculas para busca 100% insensível a acentuação e maiúsculas/minúsculas.
- * Ex: "Nutrição" -> "nutricao", "ÁGUA" -> "agua", "Aterosclerose" -> "aterosclerose"
  */
 function normalizarTexto(str: string): string {
   if (!str) return '';
@@ -24,6 +23,25 @@ function normalizarTexto(str: string): string {
 export const App: React.FC = () => {
   const [roteiros, setRoteiros] = useState<Roteiro[]>([]);
   const [carregando, setCarregando] = useState<boolean>(true);
+
+  // Estado do Tema (Light / Dark)
+  const [tema, setTema] = useState<'dark' | 'light'>(() => {
+    const salvo = localStorage.getItem('app_tema');
+    return (salvo === 'light' || salvo === 'dark') ? salvo : 'dark';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('app_tema', tema);
+    if (tema === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [tema]);
+
+  const toggleTema = () => {
+    setTema(prev => (prev === 'dark' ? 'light' : 'dark'));
+  };
 
   // Modo de Visualização: 'pastas' (Estilo Gerenciador Windows/Pastas) ou 'grade' (Cards)
   const [modoVisualizacao, setModoVisualizacao] = useState<'pastas' | 'grade'>('pastas');
@@ -121,24 +139,23 @@ export const App: React.FC = () => {
           `${r.titulo} ${r.tema} ${r.curso} ${r.disciplina} ${r.docente} ${r.tipoCurso} ${r.modeloComponente} ${r.descricao || ''}`
         );
         
-        // Suporta busca por múltiplos termos espaçados (ex: "nutricao glicemia")
         const termos = termoNorm.split(/\s+/).filter(Boolean);
         const correspondeTodosTermos = termos.every(t => conteudoNorm.includes(t));
         
         if (!correspondeTodosTermos) return false;
       }
 
-      // 2. Filtro de Curso (Insensível a Acentos/Caixa)
+      // 2. Filtro de Curso
       if (filtros.curso && normalizarTexto(r.curso) !== normalizarTexto(filtros.curso)) {
         return false;
       }
 
-      // 3. Filtro de Tipo de Curso (Presencial / Semi-presencial)
+      // 3. Filtro de Tipo de Curso
       if (filtros.tipoCurso !== 'Todos' && normalizarTexto(r.tipoCurso) !== normalizarTexto(filtros.tipoCurso)) {
         return false;
       }
 
-      // 4. Filtro de Modelo de Componente (Básico / Específico)
+      // 4. Filtro de Modelo de Componente
       if (filtros.modeloComponente !== 'Todos' && normalizarTexto(r.modeloComponente) !== normalizarTexto(filtros.modeloComponente)) {
         return false;
       }
@@ -161,7 +178,7 @@ export const App: React.FC = () => {
       return true;
     });
 
-    // Ordena Alfabeticamente por Título (Aula Prática 1, Aula Prática 2, Aula Prática 3...)
+    // Ordena Alfabeticamente por Título
     return filtrados.sort((a, b) => 
       a.titulo.localeCompare(b.titulo, 'pt-BR', { numeric: true, sensitivity: 'base' })
     );
@@ -188,13 +205,17 @@ export const App: React.FC = () => {
     setRoteiros(prev => prev.filter(r => r.id !== id));
   };
 
+  const isDark = tema === 'dark';
+
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col bg-glow-radial">
+    <div className={`min-h-screen flex flex-col bg-glow-radial transition-colors duration-300 ${
+      isDark ? 'bg-slate-950 text-slate-100' : 'bg-slate-100 text-slate-900'
+    }`}>
       
-      {/* Conteúdo Principal Ultra Limpo */}
+      {/* Conteúdo Principal */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
         
-        {/* Busca, Filtros e Botão Cadastrar Roteiro */}
+        {/* Busca, Filtros, Botão Cadastrar Roteiro e Botão de Tema */}
         <FiltrosBusca
           filtros={filtros}
           opcoes={opcoesFiltros}
@@ -202,23 +223,29 @@ export const App: React.FC = () => {
           onLimparFiltros={handleLimparFiltros}
           totalResultados={roteirosFiltrados.length}
           onOpenUploadModal={() => setUploadModalAberto(true)}
+          tema={tema}
+          onToggleTema={toggleTema}
         />
 
         {/* Alternador de Modo de Visualização (Pastas x Grade) */}
         {!carregando && roteirosFiltrados.length > 0 && (
           <div className="flex items-center justify-between mb-5">
-            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+            <span className={`text-xs font-bold uppercase tracking-wider ${
+              isDark ? 'text-slate-400' : 'text-slate-500'
+            }`}>
               Exibição dos Roteiros
             </span>
 
-            <div className="flex rounded-xl bg-slate-900 p-1 border border-slate-800">
+            <div className={`flex rounded-xl p-1 border ${
+              isDark ? 'bg-slate-900 border-slate-800' : 'bg-slate-200 border-slate-300'
+            }`}>
               <button
                 type="button"
                 onClick={() => setModoVisualizacao('pastas')}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                   modoVisualizacao === 'pastas'
                     ? 'bg-brand-500 text-slate-950 font-bold shadow-sm'
-                    : 'text-slate-400 hover:text-slate-200'
+                    : isDark ? 'text-slate-400 hover:text-slate-200' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
                 <FolderTree className="w-3.5 h-3.5" />
@@ -231,7 +258,7 @@ export const App: React.FC = () => {
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                   modoVisualizacao === 'grade'
                     ? 'bg-cyan-500 text-slate-950 font-bold shadow-sm'
-                    : 'text-slate-400 hover:text-slate-200'
+                    : isDark ? 'text-slate-400 hover:text-slate-200' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
                 <LayoutGrid className="w-3.5 h-3.5" />
@@ -273,12 +300,18 @@ export const App: React.FC = () => {
         ) : (
 
           /* Estado Sem Resultados */
-          <div className="glass-panel rounded-2xl p-12 text-center max-w-lg mx-auto border border-slate-800 my-8">
-            <div className="w-16 h-16 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center mx-auto mb-4 text-slate-500">
+          <div className={`glass-panel rounded-2xl p-12 text-center max-w-lg mx-auto border my-8 ${
+            isDark ? 'border-slate-800' : 'border-slate-300'
+          }`}>
+            <div className={`w-16 h-16 rounded-full border flex items-center justify-center mx-auto mb-4 ${
+              isDark ? 'bg-slate-900 border-slate-800 text-slate-500' : 'bg-slate-200 border-slate-300 text-slate-400'
+            }`}>
               <SearchX className="w-8 h-8" />
             </div>
-            <h3 className="text-lg font-bold text-white mb-1">Nenhum roteiro encontrado</h3>
-            <p className="text-xs text-slate-400 mb-6">
+            <h3 className={`text-lg font-bold mb-1 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+              Nenhum roteiro encontrado
+            </h3>
+            <p className={`text-xs mb-6 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
               Não encontramos nenhum roteiro com a combinação de filtros selecionada. Tente ajustar os parâmetros ou limpar a busca.
             </p>
             <button

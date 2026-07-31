@@ -4,9 +4,14 @@
 
 @layer base {
   body {
-    @apply bg-slate-950 text-slate-100 antialiased;
+    @apply bg-slate-950 text-slate-100 antialiased transition-colors duration-300;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
+}
+
+/* Light Mode Body Adaptation */
+html:not(.dark) body {
+  @apply bg-slate-100 text-slate-900;
 }
 
 /* Custom Scrollbar */
@@ -19,21 +24,37 @@
   background: rgba(15, 23, 42, 0.6);
 }
 
+html:not(.dark) ::-webkit-scrollbar-track {
+  background: rgba(226, 232, 240, 0.8);
+}
+
 ::-webkit-scrollbar-thumb {
   background: rgba(51, 65, 85, 0.8);
   border-radius: 4px;
+}
+
+html:not(.dark) ::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.8);
 }
 
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(16, 185, 129, 0.6);
 }
 
-/* Glassmorphism utilities */
+/* Glassmorphism utilities - Dark Mode */
 .glass-panel {
   background: rgba(15, 23, 42, 0.75);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Glassmorphism utilities - Light Mode */
+html:not(.dark) .glass-panel {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(0, 0, 0, 0.08);
 }
 
 .glass-panel-hover {
@@ -47,10 +68,22 @@
   box-shadow: 0 12px 30px -10px rgba(16, 185, 129, 0.15);
 }
 
+html:not(.dark) .glass-panel-hover:hover {
+  background: rgba(255, 255, 255, 1);
+  border-color: rgba(16, 185, 129, 0.4);
+  box-shadow: 0 12px 30px -10px rgba(16, 185, 129, 0.2);
+}
+
 .glass-card-interactive {
   background: rgba(15, 23, 42, 0.6);
   backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+html:not(.dark) .glass-card-interactive {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(0, 0, 0, 0.08);
 }
 
 /* Custom Animations */
@@ -66,4 +99,8 @@
 /* Subtle background glows */
 .bg-glow-radial {
   background: radial-gradient(circle at 50% 0%, rgba(16, 185, 129, 0.12) 0%, rgba(15, 23, 42, 0) 70%);
+}
+
+html:not(.dark) .bg-glow-radial {
+  background: radial-gradient(circle at 50% 0%, rgba(16, 185, 129, 0.1) 0%, rgba(241, 245, 249, 0) 70%);
 }
