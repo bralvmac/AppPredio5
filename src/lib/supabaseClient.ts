@@ -175,8 +175,6 @@ export async function cadastrarRoteiro(
 
 // Função utilitária para excluir roteiro (do Supabase DB, Storage e LocalStorage)
 export async function deletarRoteiro(id: string, arquivoPath?: string): Promise<boolean> {
-  let excluidoNoSupabase = false;
-
   if (isSupabaseConfigured && supabase) {
     try {
       // Deleta do Banco de Dados
@@ -187,8 +185,6 @@ export async function deletarRoteiro(id: string, arquivoPath?: string): Promise<
 
       if (dbError) {
         console.error("Erro ao excluir roteiro do banco Supabase:", dbError);
-      } else {
-        excluidoNoSupabase = true;
       }
 
       // Deleta o PDF do Storage se houver caminho do arquivo

@@ -6,7 +6,7 @@ import { PdfModalViewer } from './components/PdfModalViewer';
 import { UploadModal } from './components/UploadModal';
 import { StatsBanner } from './components/StatsBanner';
 import { Roteiro, FiltrosState, OpcoesFiltros } from './types/roteiro';
-import { buscarRoteiros, deletarRoteiro } from './lib/supabaseClient';
+import { buscarRoteiros, deletarRoteiro, supabase, isSupabaseConfigured } from './lib/supabaseClient';
 import { SearchX, Loader2 } from 'lucide-react';
 
 export const App: React.FC = () => {
@@ -29,7 +29,7 @@ export const App: React.FC = () => {
     tema: ''
   });
 
-  // Carrega os dados iniciais
+  // Carrega os dados iniciais e escuta mudanças em Realtime
   useEffect(() => {
     async function carregarDados() {
       try {
@@ -42,7 +42,28 @@ export const App: React.FC = () => {
         setCarregando(false);
       }
     }
+
     carregarDados();
+
+    // Inscrição em Tempo Real (Supabase Realtime)
+    if (isSupabaseConfigured && supabase) {
+      const channel = supabase
+        .channel('mudancas-roteiros')
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'roteiros' },
+          async () => {
+            // Atualiza a lista em tempo real quando houver qualquer INSERT ou DELETE
+            const atualizados = await buscarRoteiros();
+            setRoteiros(atualizados);
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
   }, []);
 
   // Extrai listas únicas para popular os seletores dos filtros
