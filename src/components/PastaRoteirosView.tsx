@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Folder, FolderOpen, ChevronRight, ChevronDown, FileText, Eye, Download, Share2, Trash2, Check, AlertTriangle, Building2, Laptop, Loader2, MessageCircle } from 'lucide-react';
+import { Folder, FolderOpen, ChevronRight, ChevronDown, FileText, Eye, Download, Share2, Trash2, Check, AlertTriangle, Loader2, MessageCircle } from 'lucide-react';
 import { Roteiro } from '../types/roteiro';
 import { baixarPdfRoteiro, compartilharNoWhatsApp } from '../lib/downloadHelper';
 
@@ -220,13 +220,12 @@ export const PastaRoteirosView: React.FC<PastaRoteirosViewProps> = ({
                   }}
                 >
                   
-                  {/* Subpasta 1: Presencial */}
+                  {/* Subpasta 1: Presencial - Cor Verde Esmeralda Vibrante */}
                   {totalPresencial > 0 && (
                     <SubpastaModalidadeCard
                       chaveSubpasta={`${cursoNome}-Presencial`}
                       tituloModalidade="Presencial"
-                      icone={<Building2 className="w-3.5 h-3.5 text-amber-500 shrink-0" />}
-                      corTag="amber"
+                      corTag="emerald"
                       roteiros={subpastas['Presencial']}
                       estaAberta={Boolean(subpastasAbertas[`${cursoNome}-Presencial`])}
                       onToggle={() => toggleSubpasta(`${cursoNome}-Presencial`)}
@@ -236,12 +235,11 @@ export const PastaRoteirosView: React.FC<PastaRoteirosViewProps> = ({
                     />
                   )}
 
-                  {/* Subpasta 2: Semi-presencial */}
+                  {/* Subpasta 2: Semi-presencial - Cor Índigo / Azul */}
                   {totalSemi > 0 && (
                     <SubpastaModalidadeCard
                       chaveSubpasta={`${cursoNome}-Semi-presencial`}
                       tituloModalidade="Semi-presencial"
-                      icone={<Laptop className="w-3.5 h-3.5 text-indigo-500 shrink-0" />}
                       corTag="indigo"
                       roteiros={subpastas['Semi-presencial']}
                       estaAberta={Boolean(subpastasAbertas[`${cursoNome}-Semi-presencial`])}
@@ -264,12 +262,11 @@ export const PastaRoteirosView: React.FC<PastaRoteirosViewProps> = ({
   );
 };
 
-// Componente da Subpasta por Modalidade (2º Nível)
+// Componente da Subpasta por Modalidade (2º Nível - Apenas Ícone da Pasta)
 const SubpastaModalidadeCard: React.FC<{
   chaveSubpasta: string;
   tituloModalidade: string;
-  icone: React.ReactNode;
-  corTag: 'amber' | 'indigo';
+  corTag: 'emerald' | 'indigo';
   roteiros: Roteiro[];
   estaAberta: boolean;
   onToggle: () => void;
@@ -278,7 +275,6 @@ const SubpastaModalidadeCard: React.FC<{
   isDark: boolean;
 }> = ({
   tituloModalidade,
-  icone,
   corTag,
   roteiros,
   estaAberta,
@@ -287,7 +283,7 @@ const SubpastaModalidadeCard: React.FC<{
   onDeletar,
   isDark
 }) => {
-  const isAmber = corTag === 'amber';
+  const isEmerald = corTag === 'emerald';
 
   return (
     <div
@@ -307,36 +303,41 @@ const SubpastaModalidadeCard: React.FC<{
           borderColor: isDark ? '#334155' : '#e2e8f0'
         }}
       >
-        <div className="flex items-center gap-2 min-w-0 flex-1 pr-2">
-          <div className={`w-6 h-6 sm:w-7 sm:h-7 rounded-lg flex items-center justify-center border shrink-0 ${
-            isAmber
-              ? 'bg-amber-500/10 border-amber-500/20 text-amber-500'
-              : 'bg-indigo-500/10 border-indigo-500/20 text-indigo-500'
-          }`}>
-            {estaAberta ? <FolderOpen className="w-3.5 h-3.5" /> : <Folder className="w-3.5 h-3.5" />}
+        <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-2">
+          {/* Apenas o Ícone da Pasta */}
+          <div
+            className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center border shrink-0"
+            style={
+              isEmerald
+                ? (isDark
+                    ? { backgroundColor: 'rgba(16, 185, 129, 0.15)', borderColor: 'rgba(16, 185, 129, 0.3)', color: '#34d399' }
+                    : { backgroundColor: '#d1fae5', borderColor: '#a7f3d0', color: '#059669' })
+                : (isDark
+                    ? { backgroundColor: 'rgba(99, 102, 241, 0.15)', borderColor: 'rgba(99, 102, 241, 0.3)', color: '#818cf8' }
+                    : { backgroundColor: '#e0e7ff', borderColor: '#c7d2fe', color: '#4f46e5' })
+            }
+          >
+            {estaAberta ? <FolderOpen className="w-4 h-4" /> : <Folder className="w-4 h-4" />}
           </div>
           
-          <div className="flex items-center gap-1.5 min-w-0 flex-1">
-            {icone}
-            <span
-              className="text-xs font-black break-words whitespace-normal"
-              style={{ color: isDark ? '#ffffff' : '#020617' }}
-            >
-              Subpasta: {tituloModalidade}
-            </span>
-          </div>
+          <span
+            className="text-xs sm:text-sm font-black break-words whitespace-normal"
+            style={{ color: isDark ? '#ffffff' : '#020617' }}
+          >
+            Subpasta: {tituloModalidade}
+          </span>
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
           <span
             className="px-2 py-0.5 rounded-lg text-[10px] font-extrabold border whitespace-nowrap"
             style={
-              isAmber
+              isEmerald
                 ? (isDark
-                    ? { backgroundColor: 'rgba(245, 158, 11, 0.1)', color: '#fbbf24', borderColor: 'rgba(245, 158, 11, 0.2)' }
-                    : { backgroundColor: '#fef3c7', color: '#78350f', borderColor: '#fde68a' })
+                    ? { backgroundColor: 'rgba(16, 185, 129, 0.15)', color: '#34d399', borderColor: 'rgba(16, 185, 129, 0.3)' }
+                    : { backgroundColor: '#d1fae5', color: '#065f46', borderColor: '#a7f3d0' })
                 : (isDark
-                    ? { backgroundColor: 'rgba(99, 102, 241, 0.1)', color: '#818cf8', borderColor: 'rgba(99, 102, 241, 0.2)' }
+                    ? { backgroundColor: 'rgba(99, 102, 241, 0.15)', color: '#818cf8', borderColor: 'rgba(99, 102, 241, 0.3)' }
                     : { backgroundColor: '#e0e7ff', color: '#3730a3', borderColor: '#c7d2fe' })
             }
           >
