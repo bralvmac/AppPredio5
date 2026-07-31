@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Folder, FolderOpen, ChevronRight, ChevronDown, FileText, Eye, Download, Share2, Trash2, Check, AlertTriangle, Building2, Loader2 } from 'lucide-react';
-import { Roteiro } from '../types/roteiro';
+import { Folder, FolderOpen, ChevronRight, ChevronDown, FileText, Eye, Download, Share2, Trash2, Check, AlertTriangle, Building2, Laptop, Loader2 } from 'lucide-react';
+import { Roteiro, TipoCurso } from '../types/roteiro';
 import { baixarPdfRoteiro } from '../lib/downloadHelper';
 
 interface PastaRoteirosViewProps {
@@ -9,65 +9,104 @@ interface PastaRoteirosViewProps {
   onDeletar: (id: string, arquivoPath?: string) => void;
 }
 
+interface EstruturaSubpastas {
+  'Presencial': Roteiro[];
+  'Semi-presencial': Roteiro[];
+}
+
 export const PastaRoteirosView: React.FC<PastaRoteirosViewProps> = ({
   roteiros,
   onOpenPdf,
   onDeletar
 }) => {
-  // Agrupa os roteiros por Curso e ordena Alfabeticamente por Título (A-Z)
-  const roteirosPorCurso = React.useMemo(() => {
-    const grupos: { [curso: string]: Roteiro[] } = {};
+  // Agrupa os roteiros por Curso e depois por Subpasta de Modalidade (Presencial / Semi-presencial)
+  const hierarquiaCursos = React.useMemo(() => {
+    const cursosMap: { [curso: string]: EstruturaSubpastas } = {};
     
     roteiros.forEach(r => {
       const cursoNome = r.curso ? r.curso.trim() : 'Sem Curso Definido';
-      if (!grupos[cursoNome]) {
-        grupos[cursoNome] = [];
+      const tipoModalidade: 'Presencial' | 'Semi-presencial' = 
+        r.tipoCurso === 'Semi-presencial' ? 'Semi-presencial' : 'Presencial';
+
+      if (!cursosMap[cursoNome]) {
+        cursosMap[cursoNome] = {
+          'Presencial': [],
+          'Semi-presencial': []
+        };
       }
-      grupos[cursoNome].push(r);
+
+      cursosMap[cursoNome][tipoModalidade].push(r);
     });
 
-    // Ordenação Alfabética Natural por Título (Aula Prática 1, Aula Prática 2, Aula Prática 3...)
-    Object.keys(grupos).forEach(curso => {
-      grupos[curso].sort((a, b) => 
+    // Ordenação Alfabética Natural por Título (A-Z) para os roteiros de cada subpasta
+    Object.keys(cursosMap).forEach(curso => {
+      cursosMap[curso]['Presencial'].sort((a, b) => 
+        a.titulo.localeCompare(b.titulo, 'pt-BR', { numeric: true, sensitivity: 'base' })
+      );
+      cursosMap[curso]['Semi-presencial'].sort((a, b) => 
         a.titulo.localeCompare(b.titulo, 'pt-BR', { numeric: true, sensitivity: 'base' })
       );
     });
 
-    return grupos;
+    return cursosMap;
   }, [roteiros]);
 
-  // Estado das pastas abertas/fechadas (por padrão todas abertas)
-  const [pastasAbertas, setPastasAbertas] = useState<{ [curso: string]: boolean }>({});
+  // Estado de Abertura das Pastas Principais (Cursos) e Subpastas (Modalidades)
+  const [pastasCursoAbertas, setPastasCursoAbertas] = useState<{ [curso: string]: boolean }>({});
+  const [subpastasAbertas, setSubpastasAbertas] = useState<{ [key: string]: boolean }>({});
 
-  const togglePasta = (curso: string) => {
-    setPastasAbertas(prev => ({
+  const togglePastaCurso = (curso: string) => {
+    setPastasCursoAbertas(prev => ({
       ...prev,
       [curso]: prev[curso] === undefined ? false : !prev[curso]
     }));
   };
 
+  const toggleSubpasta = (chaveSubpasta: string) => {
+    setSubpastasAbertas(prev => ({
+      ...prev,
+      [chaveSubpasta]: prev[chaveSubpasta] === undefined ? false : !prev[chaveSubpasta]
+    }));
+  };
+
   const expandirTodas = () => {
-    const novoEstado: { [curso: string]: boolean } = {};
-    Object.keys(roteirosPorCurso).forEach(c => { novoEstado[c] = true; });
-    setPastasAbertas(novoEstado);
+    const estadoCurso: { [curso: string]: boolean } = {};
+    const estadoSub: { [key: string]: boolean } = {};
+    
+    Object.keys(hierarquiaCursos).forEach(c => {
+      estadoCurso[c] = true;
+      estadoSub[`${c}-Presencial`] = true;
+      estadoSub[`${c}-Semi-presencial`] = true;
+    });
+
+    setPastasCursoAbertas(estadoCurso);
+    setSubpastasAbertas(estadoSub);
   };
 
   const recolherTodas = () => {
-    const novoEstado: { [curso: string]: boolean } = {};
-    Object.keys(roteirosPorCurso).forEach(c => { novoEstado[c] = false; });
-    setPastasAbertas(novoEstado);
+    const estadoCurso: { [curso: string]: boolean } = {};
+    const estadoSub: { [key: string]: boolean } = {};
+
+    Object.keys(hierarquiaCursos).forEach(c => {
+      estadoCurso[c] = false;
+      estadoSub[`${c}-Presencial`] = false;
+      estadoSub[`${c}-Semi-presencial`] = false;
+    });
+
+    setPastasCursoAbertas(estadoCurso);
+    setSubpastasAbertas(estadoSub);
   };
 
-  const cursos = Object.keys(roteirosPorCurso).sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  const listaCursos = Object.keys(hierarquiaCursos).sort((a, b) => a.localeCompare(b, 'pt-BR'));
 
   return (
     <div className="space-y-4 animate-fade-in">
       
-      {/* Barra de Controle de Pastas */}
+      {/* Barra de Controle do Gerenciador de Pastas */}
       <div className="flex items-center justify-between px-2 text-xs text-slate-400">
         <span className="font-semibold text-slate-300 flex items-center gap-1.5">
           <Folder className="w-4 h-4 text-amber-400" />
-          Gerenciador de Pastas ({cursos.length} {cursos.length === 1 ? 'curso' : 'cursos'})
+          Árvore de Pastas & Subpastas ({listaCursos.length} {listaCursos.length === 1 ? 'curso' : 'cursos'})
         </span>
         <div className="flex items-center gap-3 font-medium">
           <button
@@ -86,26 +125,30 @@ export const PastaRoteirosView: React.FC<PastaRoteirosViewProps> = ({
         </div>
       </div>
 
-      {/* Lista de Pastas por Curso */}
-      <div className="space-y-3">
-        {cursos.map((cursoNome) => {
-          const listaRoteiros = roteirosPorCurso[cursoNome];
-          const estaAberta = pastasAbertas[cursoNome] !== false;
+      {/* Lista de Pastas Raiz (Cursos) */}
+      <div className="space-y-3.5">
+        {listaCursos.map((cursoNome) => {
+          const subpastas = hierarquiaCursos[cursoNome];
+          const totalPresencial = subpastas['Presencial'].length;
+          const totalSemi = subpastas['Semi-presencial'].length;
+          const totalGeral = totalPresencial + totalSemi;
+
+          const cursoAberto = pastasCursoAbertas[cursoNome] !== false;
 
           return (
             <div
               key={cursoNome}
-              className="glass-panel rounded-2xl border border-slate-800/90 overflow-hidden transition-all duration-200 shadow-lg"
+              className="glass-panel rounded-2xl border border-slate-800/90 overflow-hidden transition-all duration-200 shadow-xl"
             >
               
-              {/* Cabeçalho da Pasta (Clicável) */}
+              {/* Pasta Principal do Curso (1º Nível) */}
               <button
-                onClick={() => togglePasta(cursoNome)}
+                onClick={() => togglePastaCurso(cursoNome)}
                 className="w-full px-5 py-4 bg-slate-900/90 hover:bg-slate-800/80 flex items-center justify-between text-left transition-colors cursor-pointer group select-none"
               >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 group-hover:scale-105 transition-transform">
-                    {estaAberta ? (
+                <div className="flex items-center gap-3.5 min-w-0">
+                  <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 group-hover:scale-105 transition-transform shrink-0">
+                    {cursoAberto ? (
                       <FolderOpen className="w-5 h-5" />
                     ) : (
                       <Folder className="w-5 h-5" />
@@ -116,32 +159,55 @@ export const PastaRoteirosView: React.FC<PastaRoteirosViewProps> = ({
                       {cursoNome}
                     </h3>
                     <p className="text-[11px] text-slate-400">
-                      Pasta contendo {listaRoteiros.length} {listaRoteiros.length === 1 ? 'roteiro' : 'roteiros'}
+                      Curso com {totalGeral} {totalGeral === 1 ? 'roteiro cadastrado' : 'roteiros cadastrados'}
                     </p>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <span className="px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                    {listaRoteiros.length} {listaRoteiros.length === 1 ? 'arquivo' : 'arquivos'}
+                  <span className="px-3 py-1 rounded-xl text-xs font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                    {totalGeral} {totalGeral === 1 ? 'roteiro' : 'roteiros'}
                   </span>
-                  <div className="p-1 rounded-lg bg-slate-800 text-slate-400 group-hover:text-white">
-                    {estaAberta ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                  <div className="p-1.5 rounded-lg bg-slate-800 text-slate-400 group-hover:text-white">
+                    {cursoAberto ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                   </div>
                 </div>
               </button>
 
-              {/* Conteúdo Interno da Pasta (Lista de Arquivos Ordenados A-Z) */}
-              {estaAberta && (
-                <div className="p-3 sm:p-4 bg-slate-950/60 border-t border-slate-800/80 space-y-2.5">
-                  {listaRoteiros.map((roteiro) => (
-                    <ItemRoteiroArquivoRow
-                      key={roteiro.id}
-                      roteiro={roteiro}
+              {/* Subpastas de Modalidade (2º Nível: Presencial e Semi-presencial) */}
+              {cursoAberto && (
+                <div className="p-3 sm:p-4 bg-slate-950/70 border-t border-slate-800/80 space-y-3 pl-4 sm:pl-8">
+                  
+                  {/* Subpasta 1: Presencial */}
+                  {totalPresencial > 0 && (
+                    <SubpastaModalidadeCard
+                      chaveSubpasta={`${cursoNome}-Presencial`}
+                      tituloModalidade="Presencial"
+                      icone={<Building2 className="w-4 h-4 text-amber-400" />}
+                      corTag="amber"
+                      roteiros={subpastas['Presencial']}
+                      estaAberta={subpastasAbertas[`${cursoNome}-Presencial`] !== false}
+                      onToggle={() => toggleSubpasta(`${cursoNome}-Presencial`)}
                       onOpenPdf={onOpenPdf}
                       onDeletar={onDeletar}
                     />
-                  ))}
+                  )}
+
+                  {/* Subpasta 2: Semi-presencial */}
+                  {totalSemi > 0 && (
+                    <SubpastaModalidadeCard
+                      chaveSubpasta={`${cursoNome}-Semi-presencial`}
+                      tituloModalidade="Semi-presencial"
+                      icone={<Laptop className="w-4 h-4 text-indigo-400" />}
+                      corTag="indigo"
+                      roteiros={subpastas['Semi-presencial']}
+                      estaAberta={subpastasAbertas[`${cursoNome}-Semi-presencial`] !== false}
+                      onToggle={() => toggleSubpasta(`${cursoNome}-Semi-presencial`)}
+                      onOpenPdf={onOpenPdf}
+                      onDeletar={onDeletar}
+                    />
+                  )}
+
                 </div>
               )}
 
@@ -149,6 +215,86 @@ export const PastaRoteirosView: React.FC<PastaRoteirosViewProps> = ({
           );
         })}
       </div>
+
+    </div>
+  );
+};
+
+// Componente da Subpasta por Modalidade (2º Nível)
+const SubpastaModalidadeCard: React.FC<{
+  chaveSubpasta: string;
+  tituloModalidade: string;
+  icone: React.ReactNode;
+  corTag: 'amber' | 'indigo';
+  roteiros: Roteiro[];
+  estaAberta: boolean;
+  onToggle: () => void;
+  onOpenPdf: (roteiro: Roteiro) => void;
+  onDeletar: (id: string, arquivoPath?: string) => void;
+}> = ({
+  tituloModalidade,
+  icone,
+  corTag,
+  roteiros,
+  estaAberta,
+  onToggle,
+  onOpenPdf,
+  onDeletar
+}) => {
+  const isAmber = corTag === 'amber';
+
+  return (
+    <div className="rounded-xl border border-slate-800 bg-slate-900/60 overflow-hidden">
+      
+      {/* Botão de Abrir/Fechar a Subpasta */}
+      <button
+        onClick={onToggle}
+        className="w-full px-4 py-3 bg-slate-900/80 hover:bg-slate-800/60 flex items-center justify-between text-left transition-colors cursor-pointer group select-none"
+      >
+        <div className="flex items-center gap-2.5">
+          <div className={`w-7 h-7 rounded-lg flex items-center justify-center border ${
+            isAmber
+              ? 'bg-amber-500/10 border-amber-500/20 text-amber-400'
+              : 'bg-indigo-500/10 border-indigo-500/20 text-indigo-400'
+          }`}>
+            {estaAberta ? <FolderOpen className="w-4 h-4" /> : <Folder className="w-4 h-4" />}
+          </div>
+          
+          <div className="flex items-center gap-2">
+            {icone}
+            <span className="text-xs font-bold text-slate-200 group-hover:text-white">
+              Subpasta: {tituloModalidade}
+            </span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2.5">
+          <span className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border ${
+            isAmber
+              ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+              : 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20'
+          }`}>
+            {roteiros.length} {roteiros.length === 1 ? 'roteiro' : 'roteiros'}
+          </span>
+          <div className="p-1 text-slate-400 group-hover:text-slate-200">
+            {estaAberta ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+          </div>
+        </div>
+      </button>
+
+      {/* Roteiros dentro da Subpasta (3º Nível) */}
+      {estaAberta && (
+        <div className="p-2.5 sm:p-3 bg-slate-950/80 border-t border-slate-800/60 space-y-2 pl-3 sm:pl-5">
+          {roteiros.map((roteiro) => (
+            <ItemRoteiroArquivoRow
+              key={roteiro.id}
+              roteiro={roteiro}
+              onOpenPdf={onOpenPdf}
+              onDeletar={onDeletar}
+            />
+          ))}
+        </div>
+      )}
 
     </div>
   );
@@ -193,16 +339,15 @@ const ItemRoteiroArquivoRow: React.FC<{
     }
   };
 
-  const isPresencial = roteiro.tipoCurso === 'Presencial';
   const isBasico = roteiro.modeloComponente === 'Básico';
 
   return (
-    <div className="glass-card-interactive rounded-xl p-3.5 sm:p-4 border border-slate-800/80 hover:border-brand-500/40 transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 relative group">
+    <div className="glass-card-interactive rounded-xl p-3 sm:p-3.5 border border-slate-800/80 hover:border-brand-500/40 transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 relative group">
       
       {/* Nome e Metadados do Arquivo */}
-      <div className="flex items-start gap-3 min-w-0 flex-1">
-        <div className="w-9 h-9 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-brand-400 shrink-0 mt-0.5">
-          <FileText className="w-5 h-5" />
+      <div className="flex items-start gap-2.5 min-w-0 flex-1">
+        <div className="w-8 h-8 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-center text-brand-400 shrink-0 mt-0.5">
+          <FileText className="w-4 h-4" />
         </div>
 
         <div className="min-w-0 flex-1">
@@ -211,19 +356,7 @@ const ItemRoteiroArquivoRow: React.FC<{
               {roteiro.titulo}
             </span>
 
-            {/* Badge Tipo de Curso Colorida */}
-            {roteiro.tipoCurso && (
-              <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-semibold border ${
-                isPresencial
-                  ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
-                  : 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20'
-              }`}>
-                <Building2 className="w-3 h-3 mr-1" />
-                {roteiro.tipoCurso}
-              </span>
-            )}
-
-            {/* Badge Modelo Componente Colorida */}
+            {/* Badge Modelo Componente Colorida (Básico / Específico) */}
             {roteiro.modeloComponente && (
               <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-semibold border ${
                 isBasico
@@ -235,7 +368,7 @@ const ItemRoteiroArquivoRow: React.FC<{
             )}
           </div>
 
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-400">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400">
             <span><strong className="text-slate-300">Tema:</strong> {roteiro.tema}</span>
             <span>•</span>
             <span><strong className="text-slate-300">Unidade:</strong> {roteiro.disciplina}</span>
@@ -253,7 +386,7 @@ const ItemRoteiroArquivoRow: React.FC<{
       <div className="flex items-center gap-2 w-full sm:w-auto justify-end pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-800/60">
         <button
           onClick={() => onOpenPdf(roteiro)}
-          className="inline-flex items-center justify-center px-3.5 py-1.5 rounded-lg text-xs font-bold text-slate-950 bg-gradient-to-r from-emerald-400 to-teal-400 hover:from-emerald-300 hover:to-teal-300 transition-colors shadow-sm"
+          className="inline-flex items-center justify-center px-3 py-1.5 rounded-lg text-xs font-bold text-slate-950 bg-gradient-to-r from-emerald-400 to-teal-400 hover:from-emerald-300 hover:to-teal-300 transition-colors shadow-sm"
         >
           <Eye className="w-3.5 h-3.5 mr-1 stroke-[2.5]" />
           <span>Visualizar</span>
