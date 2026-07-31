@@ -34,24 +34,24 @@ export const PdfModalViewer: React.FC<PdfModalViewerProps> = ({ roteiro, onClose
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-6 bg-slate-950/90 backdrop-blur-md animate-fade-in">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-6 bg-slate-950/80 backdrop-blur-md animate-fade-in">
       
       {/* Container Principal do Modal */}
-      <div className="glass-panel w-full max-w-6xl h-[92vh] rounded-2xl border border-slate-800 flex flex-col overflow-hidden shadow-2xl">
+      <div className="glass-panel w-full max-w-6xl h-[92vh] rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col overflow-hidden shadow-2xl">
         
         {/* Cabeçalho Superior do Modal */}
-        <div className="px-5 py-4 bg-slate-900 border-b border-slate-800 flex items-center justify-between gap-4">
+        <div className="px-5 py-4 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-4">
           
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-xl bg-brand-500/10 border border-brand-500/20 flex items-center justify-center text-brand-400 shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-brand-500/10 border border-brand-500/20 flex items-center justify-center text-brand-600 dark:text-brand-400 shrink-0">
               <FileText className="w-5 h-5" />
             </div>
             <div className="min-w-0">
-              <h2 className="text-sm sm:text-base font-bold text-white truncate">
+              <h2 className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white truncate">
                 {roteiro.titulo}
               </h2>
-              <p className="text-xs text-slate-400 truncate">
-                Tema: <span className="text-slate-200">{roteiro.tema}</span>
+              <p className="text-xs text-slate-600 dark:text-slate-400 truncate">
+                Tema: <span className="text-amber-800 dark:text-slate-200 font-bold">{roteiro.tema}</span>
               </p>
             </div>
           </div>
@@ -62,7 +62,7 @@ export const PdfModalViewer: React.FC<PdfModalViewerProps> = ({ roteiro, onClose
             {/* Botão Compartilhar WhatsApp */}
             <button
               onClick={handleCompartilharWhatsApp}
-              className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 hover:text-emerald-300 text-xs font-bold transition-all"
+              className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/20 text-xs font-bold transition-all"
               title="Compartilhar no WhatsApp"
             >
               <MessageCircle className="w-4 h-4" />
@@ -87,10 +87,10 @@ export const PdfModalViewer: React.FC<PdfModalViewerProps> = ({ roteiro, onClose
             {/* Copiar Link */}
             <button
               onClick={handleCopiarLink}
-              className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
+              className="p-2 rounded-xl bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors"
               title="Copiar Link"
             >
-              {copiado ? <Check className="w-4 h-4 text-emerald-400" /> : <Share2 className="w-4 h-4" />}
+              {copiado ? <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400" /> : <Share2 className="w-4 h-4" />}
             </button>
 
             {/* Abrir em Nova Aba */}
@@ -98,7 +98,7 @@ export const PdfModalViewer: React.FC<PdfModalViewerProps> = ({ roteiro, onClose
               href={roteiro.pdfUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors hidden sm:flex"
+              className="p-2 rounded-xl bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors hidden sm:flex"
               title="Abrir em Nova Aba"
             >
               <ExternalLink className="w-4 h-4" />
@@ -107,7 +107,7 @@ export const PdfModalViewer: React.FC<PdfModalViewerProps> = ({ roteiro, onClose
             {/* Fechar Modal */}
             <button
               onClick={onClose}
-              className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
+              className="p-2 rounded-xl bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 hover:text-slate-950 dark:hover:text-white transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
@@ -116,35 +116,35 @@ export const PdfModalViewer: React.FC<PdfModalViewerProps> = ({ roteiro, onClose
         </div>
 
         {/* Faixa de Metadados Resumida */}
-        <div className="px-5 py-2.5 bg-slate-950/80 border-b border-slate-800/80 flex flex-wrap items-center gap-x-6 gap-y-1.5 text-xs text-slate-400">
+        <div className="px-5 py-2.5 bg-slate-100 dark:bg-slate-950/80 border-b border-slate-200 dark:border-slate-800/80 flex flex-wrap items-center gap-x-6 gap-y-1.5 text-xs text-slate-600 dark:text-slate-400 font-medium">
           <div className="flex items-center gap-1.5">
-            <GraduationCap className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Curso: <strong className="text-slate-200">{roteiro.curso}</strong></span>
+            <GraduationCap className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+            <span>Curso: <strong className="text-slate-900 dark:text-slate-200 font-bold">{roteiro.curso}</strong></span>
           </div>
 
           <div className="flex items-center gap-1.5">
-            <BookOpen className="w-3.5 h-3.5 text-brand-400" />
-            <span>Unidade Curricular: <strong className="text-slate-200">{roteiro.disciplina}</strong></span>
+            <BookOpen className="w-3.5 h-3.5 text-brand-600 dark:text-brand-400" />
+            <span>Unidade Curricular: <strong className="text-emerald-800 dark:text-slate-200 font-bold">{roteiro.disciplina}</strong></span>
           </div>
 
           <div className="flex items-center gap-1.5">
-            <User className="w-3.5 h-3.5 text-amber-400" />
-            <span>Docente/Tutor: <strong className="text-slate-200">{roteiro.docente}</strong></span>
+            <User className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+            <span>Docente/Tutor: <strong className="text-slate-900 dark:text-slate-200 font-bold">{roteiro.docente}</strong></span>
           </div>
 
           <div className="flex items-center gap-1.5">
-            <Building2 className="w-3.5 h-3.5 text-indigo-400" />
-            <span>Tipo: <strong className="text-slate-200">{roteiro.tipoCurso}</strong></span>
+            <Building2 className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+            <span>Tipo: <strong className="text-slate-900 dark:text-slate-200 font-bold">{roteiro.tipoCurso}</strong></span>
           </div>
 
           <div className="flex items-center gap-1.5">
-            <Layers className="w-3.5 h-3.5 text-rose-400" />
-            <span>Modelo: <strong className="text-slate-200">{roteiro.modeloComponente}</strong></span>
+            <Layers className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
+            <span>Modelo: <strong className="text-slate-900 dark:text-slate-200 font-bold">{roteiro.modeloComponente}</strong></span>
           </div>
         </div>
 
-        {/* Visualizador de PDF (Iframe / Object) */}
-        <div className="flex-1 bg-slate-950 relative">
+        {/* Visualizador de PDF */}
+        <div className="flex-1 bg-slate-900 relative">
           <iframe
             src={`${roteiro.pdfUrl}#toolbar=1&navpanes=0`}
             title={roteiro.titulo}

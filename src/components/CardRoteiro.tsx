@@ -56,23 +56,23 @@ export const CardRoteiro: React.FC<CardRoteiroProps> = ({
   const isBasico = roteiro.modeloComponente === 'Básico';
 
   return (
-    <div className="glass-panel-interactive rounded-2xl p-5 border border-slate-800 flex flex-col justify-between relative group hover:border-brand-500/40 transition-all duration-300 shadow-xl">
+    <div className="glass-panel-interactive rounded-2xl p-5 border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/90 flex flex-col justify-between relative group hover:border-brand-500/40 transition-all duration-300 shadow-md dark:shadow-xl">
       
       {/* Topo do Card: Tags de Curso, Tipo e Modelo */}
       <div>
         <div className="flex flex-wrap items-center gap-2 mb-3">
           {roteiro.curso && (
-            <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+            <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
               <GraduationCap className="w-3.5 h-3.5 mr-1" />
               {roteiro.curso}
             </span>
           )}
 
           {roteiro.tipoCurso && (
-            <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold border ${
+            <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold border ${
               isPresencial
-                ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
-                : 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20'
+                ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20'
+                : 'bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border-indigo-500/20'
             }`}>
               <Building2 className="w-3.5 h-3.5 mr-1" />
               {roteiro.tipoCurso}
@@ -80,10 +80,10 @@ export const CardRoteiro: React.FC<CardRoteiroProps> = ({
           )}
 
           {roteiro.modeloComponente && (
-            <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold border ${
+            <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold border ${
               isBasico
-                ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20'
-                : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+                ? 'bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 border-cyan-500/20'
+                : 'bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/20'
             }`}>
               <Layers className="w-3.5 h-3.5 mr-1" />
               {roteiro.modeloComponente}
@@ -95,7 +95,7 @@ export const CardRoteiro: React.FC<CardRoteiroProps> = ({
               e.stopPropagation();
               setConfirmandoExclusao(true);
             }}
-            className="ml-auto p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+            className="ml-auto p-1.5 rounded-lg text-slate-400 dark:text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
             title="Excluir Roteiro"
           >
             <Trash2 className="w-4 h-4" />
@@ -103,32 +103,33 @@ export const CardRoteiro: React.FC<CardRoteiroProps> = ({
         </div>
 
         {/* Título e Tema do Roteiro */}
-        <h3 className="text-base font-bold text-white group-hover:text-brand-300 transition-colors line-clamp-2 mb-1">
+        <h3 className="text-base font-extrabold text-slate-900 dark:text-white group-hover:text-brand-600 dark:group-hover:text-brand-300 transition-colors line-clamp-2 mb-1">
           {roteiro.titulo}
         </h3>
         
-        <p className="text-xs text-slate-400 mb-4 line-clamp-2">
-          <strong className="text-slate-300">Tema:</strong> {roteiro.tema}
+        <p className="text-xs text-slate-600 dark:text-slate-400 mb-4 line-clamp-2">
+          <strong className="text-slate-900 dark:text-slate-300 font-bold">Tema:</strong>{' '}
+          <span className="text-amber-800 dark:text-amber-300 font-semibold">{roteiro.tema}</span>
         </p>
 
         {/* Informações detalhadas */}
-        <div className="space-y-2 py-3 border-t border-slate-800/80 text-xs text-slate-300">
+        <div className="space-y-2 py-3 border-t border-slate-200 dark:border-slate-800/80 text-xs">
           <div className="flex items-center justify-between">
-            <span className="text-slate-400 flex items-center gap-1.5">
-              <BookOpen className="w-3.5 h-3.5 text-brand-400" />
+            <span className="text-slate-600 dark:text-slate-400 flex items-center gap-1.5 font-medium">
+              <BookOpen className="w-3.5 h-3.5 text-emerald-600 dark:text-brand-400" />
               Unidade Curricular:
             </span>
-            <span className="font-semibold text-slate-200 truncate max-w-[160px]" title={roteiro.disciplina}>
+            <span className="font-bold text-emerald-800 dark:text-emerald-300 truncate max-w-[160px]" title={roteiro.disciplina}>
               {roteiro.disciplina}
             </span>
           </div>
 
           <div className="flex items-center justify-between">
-            <span className="text-slate-400 flex items-center gap-1.5">
-              <User className="w-3.5 h-3.5 text-brand-400" />
+            <span className="text-slate-600 dark:text-slate-400 flex items-center gap-1.5 font-medium">
+              <User className="w-3.5 h-3.5 text-amber-600 dark:text-brand-400" />
               Docente / Tutor:
             </span>
-            <span className="font-semibold text-slate-200 truncate max-w-[160px]" title={roteiro.docente}>
+            <span className="font-semibold text-slate-800 dark:text-slate-200 truncate max-w-[160px]" title={roteiro.docente}>
               {roteiro.docente}
             </span>
           </div>
@@ -136,7 +137,7 @@ export const CardRoteiro: React.FC<CardRoteiroProps> = ({
       </div>
 
       {/* Botões de Ação */}
-      <div className="pt-4 mt-2 border-t border-slate-800/80 flex items-center gap-2">
+      <div className="pt-4 mt-2 border-t border-slate-200 dark:border-slate-800/80 flex items-center gap-2">
         <button
           onClick={() => onOpenPdf(roteiro)}
           className="flex-1 inline-flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-bold text-slate-950 bg-gradient-to-r from-brand-500 to-teal-400 hover:from-brand-400 hover:to-teal-300 transition-all shadow-md shadow-brand-500/10 cursor-pointer"
@@ -148,7 +149,7 @@ export const CardRoteiro: React.FC<CardRoteiroProps> = ({
         {/* WhatsApp Share */}
         <button
           onClick={handleCompartilharWhatsApp}
-          className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 hover:bg-emerald-500/20 hover:text-emerald-300 transition-colors cursor-pointer"
+          className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 transition-colors cursor-pointer"
           title="Compartilhar no WhatsApp"
         >
           <MessageCircle className="w-4 h-4" />
@@ -158,31 +159,31 @@ export const CardRoteiro: React.FC<CardRoteiroProps> = ({
         <button
           onClick={handleBaixarPdf}
           disabled={baixando}
-          className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-white transition-colors cursor-pointer disabled:opacity-50"
+          className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white transition-colors cursor-pointer disabled:opacity-50"
           title="Baixar PDF"
         >
-          {baixando ? <Loader2 className="w-4 h-4 animate-spin text-brand-400" /> : <Download className="w-4 h-4" />}
+          {baixando ? <Loader2 className="w-4 h-4 animate-spin text-brand-500" /> : <Download className="w-4 h-4" />}
         </button>
 
         {/* Copiar Link */}
         <button
           onClick={handleCopiarLink}
-          className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-white transition-colors cursor-pointer"
+          className="p-2.5 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white transition-colors cursor-pointer"
           title="Copiar Link"
         >
-          {copiado ? <Check className="w-4 h-4 text-emerald-400" /> : <Share2 className="w-4 h-4" />}
+          {copiado ? <Check className="w-4 h-4 text-emerald-600 dark:text-emerald-400" /> : <Share2 className="w-4 h-4" />}
         </button>
       </div>
 
       {/* Overlay de Confirmação de Exclusão */}
       {confirmandoExclusao && (
-        <div className="absolute inset-0 z-20 bg-slate-950/95 backdrop-blur-md rounded-2xl p-5 flex flex-col justify-between animate-fade-in border border-rose-500/30">
+        <div className="absolute inset-0 z-20 bg-white/95 dark:bg-slate-950/95 backdrop-blur-md rounded-2xl p-5 flex flex-col justify-between animate-fade-in border border-rose-500/30 shadow-2xl">
           <div className="space-y-2">
-            <div className="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-400 mb-2">
+            <div className="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-500 mb-2">
               <AlertTriangle className="w-5 h-5" />
             </div>
-            <h4 className="text-sm font-bold text-white">Excluir este roteiro?</h4>
-            <p className="text-xs text-slate-400">
+            <h4 className="text-sm font-bold text-slate-900 dark:text-white">Excluir este roteiro?</h4>
+            <p className="text-xs text-slate-600 dark:text-slate-400">
               Esta ação excluirá permanentemente o roteiro "{roteiro.titulo}" do sistema e do banco de dados.
             </p>
           </div>
@@ -190,7 +191,7 @@ export const CardRoteiro: React.FC<CardRoteiroProps> = ({
           <div className="flex items-center gap-2 pt-4">
             <button
               onClick={() => setConfirmandoExclusao(false)}
-              className="flex-1 py-2 rounded-xl bg-slate-800 text-slate-300 text-xs font-semibold hover:bg-slate-700 transition-colors"
+              className="flex-1 py-2 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-semibold hover:bg-slate-300 dark:hover:bg-slate-700 transition-colors"
             >
               Cancelar
             </button>
