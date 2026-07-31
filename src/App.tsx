@@ -282,6 +282,7 @@ export const App: React.FC = () => {
               roteiros={roteirosFiltrados}
               onOpenPdf={setRoteiroSelecionado}
               onDeletar={handleDeletarRoteiro}
+              tema={tema}
             />
           ) : (
             /* Grid de Roteiros Encontrados em Cards */
