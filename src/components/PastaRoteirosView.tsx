@@ -94,22 +94,22 @@ export const PastaRoteirosView: React.FC<PastaRoteirosViewProps> = ({
     <div className="space-y-4 animate-fade-in">
       
       {/* Barra de Controle do Gerenciador de Pastas */}
-      <div className="flex items-center justify-between px-2 text-xs text-slate-500 dark:text-slate-400">
-        <span className="font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-          <Folder className="w-4 h-4 text-amber-500 dark:text-amber-400" />
+      <div className="flex items-center justify-between px-2 text-xs">
+        <span className="font-bold text-slate-800 dark:text-slate-300 flex items-center gap-1.5">
+          <Folder className="w-4 h-4 text-amber-600 dark:text-amber-400" />
           Árvore de Pastas & Subpastas ({listaCursos.length} {listaCursos.length === 1 ? 'curso' : 'cursos'})
         </span>
-        <div className="flex items-center gap-3 font-medium">
+        <div className="flex items-center gap-3 font-semibold">
           <button
             onClick={expandirTodas}
-            className="text-emerald-600 dark:text-emerald-400 hover:underline transition-colors"
+            className="text-emerald-700 dark:text-emerald-400 hover:underline transition-colors"
           >
             + Expandir Todas
           </button>
-          <span>|</span>
+          <span className="text-slate-400 dark:text-slate-600">|</span>
           <button
             onClick={recolherTodas}
-            className="text-slate-600 dark:text-slate-300 hover:underline transition-colors"
+            className="text-slate-700 dark:text-slate-300 hover:underline transition-colors"
           >
             - Recolher Todas
           </button>
@@ -129,13 +129,13 @@ export const PastaRoteirosView: React.FC<PastaRoteirosViewProps> = ({
           return (
             <div
               key={cursoNome}
-              className="glass-panel rounded-2xl border border-slate-200 dark:border-slate-800/90 overflow-hidden transition-all duration-200 shadow-lg dark:shadow-xl"
+              className="rounded-2xl border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden transition-all duration-200 shadow-md dark:shadow-xl"
             >
               
               {/* Pasta Principal do Curso (1º Nível) */}
               <button
                 onClick={() => togglePastaCurso(cursoNome)}
-                className="w-full px-5 py-4 bg-white dark:bg-slate-900/90 hover:bg-slate-50 dark:hover:bg-slate-800/80 flex items-center justify-between text-left transition-colors cursor-pointer group select-none"
+                className="w-full px-5 py-4 bg-slate-100 dark:bg-slate-900/90 hover:bg-slate-200/70 dark:hover:bg-slate-800/80 flex items-center justify-between text-left transition-colors cursor-pointer group select-none border-b border-slate-200 dark:border-slate-800"
               >
                 <div className="flex items-center gap-3.5 min-w-0">
                   <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-600 dark:text-amber-400 group-hover:scale-105 transition-transform shrink-0">
@@ -146,20 +146,20 @@ export const PastaRoteirosView: React.FC<PastaRoteirosViewProps> = ({
                     )}
                   </div>
                   <div>
-                    <h3 className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-300 transition-colors truncate">
+                    <h3 className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white group-hover:text-amber-700 dark:group-hover:text-amber-300 transition-colors truncate">
                       {cursoNome}
                     </h3>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    <p className="text-[11px] font-medium text-slate-600 dark:text-slate-400">
                       Curso com {totalGeral} {totalGeral === 1 ? 'roteiro cadastrado' : 'roteiros cadastrados'}
                     </p>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <span className="px-3 py-1 rounded-xl text-xs font-bold bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20">
+                  <span className="px-3 py-1 rounded-xl text-xs font-extrabold bg-amber-500/10 text-amber-800 dark:text-amber-400 border border-amber-500/20">
                     {totalGeral} {totalGeral === 1 ? 'roteiro' : 'roteiros'}
                   </span>
-                  <div className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white">
+                  <div className="p-1.5 rounded-lg bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-400 group-hover:text-slate-950 dark:group-hover:text-white">
                     {cursoAberto ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                   </div>
                 </div>
@@ -167,7 +167,7 @@ export const PastaRoteirosView: React.FC<PastaRoteirosViewProps> = ({
 
               {/* Subpastas de Modalidade (2º Nível: Presencial e Semi-presencial) */}
               {cursoAberto && (
-                <div className="p-3 sm:p-4 bg-slate-100/70 dark:bg-slate-950/70 border-t border-slate-200 dark:border-slate-800/80 space-y-3 pl-4 sm:pl-8">
+                <div className="p-3 sm:p-4 bg-slate-50 dark:bg-slate-950/70 space-y-3 pl-4 sm:pl-8">
                   
                   {/* Subpasta 1: Presencial */}
                   {totalPresencial > 0 && (
@@ -235,39 +235,39 @@ const SubpastaModalidadeCard: React.FC<{
   const isAmber = corTag === 'amber';
 
   return (
-    <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 overflow-hidden shadow-sm">
+    <div className="rounded-xl border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-900/60 overflow-hidden shadow-sm">
       
       {/* Botão de Abrir/Fechar a Subpasta */}
       <button
         onClick={onToggle}
-        className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-900/80 hover:bg-slate-100 dark:hover:bg-slate-800/60 flex items-center justify-between text-left transition-colors cursor-pointer group select-none"
+        className="w-full px-4 py-3 bg-slate-100/90 dark:bg-slate-900/80 hover:bg-slate-200/80 dark:hover:bg-slate-800/60 flex items-center justify-between text-left transition-colors cursor-pointer group select-none border-b border-slate-200 dark:border-slate-800"
       >
         <div className="flex items-center gap-2.5">
           <div className={`w-7 h-7 rounded-lg flex items-center justify-center border ${
             isAmber
-              ? 'bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400'
-              : 'bg-indigo-500/10 border-indigo-500/20 text-indigo-600 dark:text-indigo-400'
+              ? 'bg-amber-500/10 border-amber-500/20 text-amber-700 dark:text-amber-400'
+              : 'bg-indigo-500/10 border-indigo-500/20 text-indigo-700 dark:text-indigo-400'
           }`}>
             {estaAberta ? <FolderOpen className="w-4 h-4" /> : <Folder className="w-4 h-4" />}
           </div>
           
           <div className="flex items-center gap-2">
             {icone}
-            <span className="text-xs font-bold text-slate-800 dark:text-slate-200 group-hover:text-slate-950 dark:group-hover:text-white">
+            <span className="text-xs font-extrabold text-slate-900 dark:text-slate-200 group-hover:text-slate-950 dark:group-hover:text-white">
               Subpasta: {tituloModalidade}
             </span>
           </div>
         </div>
 
         <div className="flex items-center gap-2.5">
-          <span className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border ${
+          <span className={`px-2 py-0.5 rounded-lg text-[10px] font-extrabold border ${
             isAmber
-              ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20'
-              : 'bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border-indigo-500/20'
+              ? 'bg-amber-500/10 text-amber-800 dark:text-amber-400 border-amber-500/20'
+              : 'bg-indigo-500/10 text-indigo-800 dark:text-indigo-400 border-indigo-500/20'
           }`}>
             {roteiros.length} {roteiros.length === 1 ? 'roteiro' : 'roteiros'}
           </span>
-          <div className="p-1 text-slate-400 dark:text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-200">
+          <div className="p-1 text-slate-500 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-slate-200">
             {estaAberta ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
           </div>
         </div>
@@ -275,7 +275,7 @@ const SubpastaModalidadeCard: React.FC<{
 
       {/* Roteiros dentro da Subpasta (3º Nível) */}
       {estaAberta && (
-        <div className="p-2.5 sm:p-3 bg-white dark:bg-slate-950/80 border-t border-slate-200 dark:border-slate-800/60 space-y-2 pl-3 sm:pl-5">
+        <div className="p-2.5 sm:p-3 bg-slate-50 dark:bg-slate-950/80 space-y-2 pl-3 sm:pl-5">
           {roteiros.map((roteiro) => (
             <ItemRoteiroArquivoRow
               key={roteiro.id}
@@ -291,7 +291,7 @@ const SubpastaModalidadeCard: React.FC<{
   );
 };
 
-// Linha Estilo Arquivo do Windows Explorer Adaptada para Modo Claro e Escuro
+// Linha Estilo Arquivo do Windows Explorer Adaptada com Máximo Contraste em Modo Claro e Escuro
 const ItemRoteiroArquivoRow: React.FC<{
   roteiro: Roteiro;
   onOpenPdf: (roteiro: Roteiro) => void;
@@ -338,52 +338,54 @@ const ItemRoteiroArquivoRow: React.FC<{
   const isBasico = roteiro.modeloComponente === 'Básico';
 
   return (
-    <div className="glass-card-interactive rounded-xl p-3 sm:p-3.5 border border-slate-200 dark:border-slate-800/80 hover:border-brand-500/50 transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 relative group shadow-sm">
+    <div className="rounded-xl p-3 sm:p-3.5 border border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-900 hover:border-brand-500 transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 relative group shadow-sm">
       
       {/* Nome e Metadados do Arquivo */}
       <div className="flex items-start gap-2.5 min-w-0 flex-1">
-        <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-center text-emerald-600 dark:text-brand-400 shrink-0 mt-0.5">
+        <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 flex items-center justify-center text-emerald-700 dark:text-brand-400 shrink-0 mt-0.5">
           <FileText className="w-4 h-4" />
         </div>
 
         <div className="min-w-0 flex-1 space-y-1">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-300 transition-colors line-clamp-1">
+            
+            {/* Título do Roteiro - 100% PRETO/DARK NO MODO CLARO */}
+            <span className="text-xs sm:text-sm font-black text-slate-950 dark:text-white group-hover:text-emerald-700 dark:group-hover:text-emerald-300 transition-colors line-clamp-1">
               {roteiro.titulo}
             </span>
 
             {/* Badge Modelo Componente Colorida (Básico / Específico) */}
             {roteiro.modeloComponente && (
-              <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-bold border ${
+              <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-extrabold border ${
                 isBasico
-                  ? 'bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 border-cyan-500/20'
-                  : 'bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/20'
+                  ? 'bg-cyan-500/10 text-cyan-800 dark:text-cyan-400 border-cyan-500/20'
+                  : 'bg-rose-500/10 text-rose-800 dark:text-rose-400 border-rose-500/20'
               }`}>
                 {roteiro.modeloComponente}
               </span>
             )}
           </div>
 
-          {/* Metadados Discriminados com Alto Contraste */}
-          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-xs text-slate-600 dark:text-slate-400">
+          {/* Metadados Discriminados com Máximo Contraste */}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-xs">
             <div className="flex items-center gap-1.5 min-w-0">
-              <strong className="text-slate-700 dark:text-slate-300 font-bold shrink-0">Tema:</strong>
-              <span className="text-amber-800 dark:text-amber-300 font-semibold truncate">{roteiro.tema}</span>
+              <strong className="text-slate-900 dark:text-slate-300 font-extrabold shrink-0">Tema:</strong>
+              <span className="text-amber-900 dark:text-amber-300 font-bold truncate">{roteiro.tema}</span>
             </div>
 
-            <span className="hidden sm:inline text-slate-300 dark:text-slate-700">•</span>
+            <span className="hidden sm:inline text-slate-400 dark:text-slate-700">•</span>
 
             <div className="flex items-center gap-1.5 min-w-0">
-              <strong className="text-slate-700 dark:text-slate-300 font-bold shrink-0">Unidade Curricular:</strong>
-              <span className="text-emerald-800 dark:text-emerald-300 font-semibold truncate">{roteiro.disciplina}</span>
+              <strong className="text-slate-900 dark:text-slate-300 font-extrabold shrink-0">Unidade Curricular:</strong>
+              <span className="text-emerald-900 dark:text-emerald-300 font-bold truncate">{roteiro.disciplina}</span>
             </div>
 
             {roteiro.docente && roteiro.docente !== 'Não informado' && (
               <>
-                <span className="hidden sm:inline text-slate-300 dark:text-slate-700">•</span>
+                <span className="hidden sm:inline text-slate-400 dark:text-slate-700">•</span>
                 <div className="flex items-center gap-1.5 min-w-0">
-                  <strong className="text-slate-700 dark:text-slate-300 font-bold shrink-0">Docente/Tutor:</strong>
-                  <span className="text-slate-700 dark:text-slate-300 truncate">{roteiro.docente}</span>
+                  <strong className="text-slate-900 dark:text-slate-300 font-extrabold shrink-0">Docente/Tutor:</strong>
+                  <span className="text-slate-800 dark:text-slate-300 font-semibold truncate">{roteiro.docente}</span>
                 </div>
               </>
             )}
@@ -397,7 +399,7 @@ const ItemRoteiroArquivoRow: React.FC<{
         {/* Visualizar PDF */}
         <button
           onClick={() => onOpenPdf(roteiro)}
-          className="inline-flex items-center justify-center px-3 py-1.5 rounded-lg text-xs font-bold text-slate-950 bg-gradient-to-r from-emerald-400 to-teal-400 hover:from-emerald-300 hover:to-teal-300 transition-colors shadow-sm"
+          className="inline-flex items-center justify-center px-3 py-1.5 rounded-lg text-xs font-extrabold text-slate-950 bg-gradient-to-r from-emerald-400 to-teal-400 hover:from-emerald-300 hover:to-teal-300 transition-colors shadow-sm"
         >
           <Eye className="w-3.5 h-3.5 mr-1 stroke-[2.5]" />
           <span>Visualizar</span>
@@ -406,7 +408,7 @@ const ItemRoteiroArquivoRow: React.FC<{
         {/* Compartilhar WhatsApp */}
         <button
           onClick={handleCompartilharWhatsApp}
-          className="p-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 transition-colors"
+          className="p-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/20 transition-colors"
           title="Compartilhar no WhatsApp"
         >
           <MessageCircle className="w-3.5 h-3.5" />
@@ -416,19 +418,19 @@ const ItemRoteiroArquivoRow: React.FC<{
         <button
           onClick={handleBaixarPdf}
           disabled={baixando}
-          className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white transition-colors disabled:opacity-50"
+          className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-slate-800 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white transition-colors disabled:opacity-50"
           title="Baixar PDF"
         >
-          {baixando ? <Loader2 className="w-3.5 h-3.5 animate-spin text-brand-500" /> : <Download className="w-3.5 h-3.5" />}
+          {baixando ? <Loader2 className="w-3.5 h-3.5 animate-spin text-brand-600" /> : <Download className="w-3.5 h-3.5" />}
         </button>
 
         {/* Copiar Link */}
         <button
           onClick={handleCopiarLink}
-          className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white transition-colors"
+          className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-800 text-slate-800 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white transition-colors"
           title="Copiar Link"
         >
-          {copiado ? <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" /> : <Share2 className="w-3.5 h-3.5" />}
+          {copiado ? <Check className="w-3.5 h-3.5 text-emerald-700 dark:text-emerald-400" /> : <Share2 className="w-3.5 h-3.5" />}
         </button>
 
         {/* Excluir Roteiro */}
@@ -450,22 +452,22 @@ const ItemRoteiroArquivoRow: React.FC<{
           className="absolute inset-0 z-20 bg-white/95 dark:bg-slate-950/95 backdrop-blur-md rounded-xl p-3 flex items-center justify-between gap-3 animate-fade-in border border-rose-500/30 shadow-lg"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="flex items-center gap-2 text-xs text-rose-600 dark:text-rose-300 font-semibold truncate">
-            <AlertTriangle className="w-4 h-4 shrink-0 text-rose-500" />
+          <div className="flex items-center gap-2 text-xs text-rose-700 dark:text-rose-300 font-bold truncate">
+            <AlertTriangle className="w-4 h-4 shrink-0 text-rose-600" />
             <span className="truncate">Excluir "{roteiro.titulo}"?</span>
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={() => setConfirmandoExclusao(false)}
-              className="py-1 px-2.5 rounded-lg bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-semibold"
+              className="py-1 px-2.5 rounded-lg bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-300 text-xs font-semibold"
             >
               Cancelar
             </button>
             <button
               onClick={handleConfirmarExclusao}
               disabled={excluindo}
-              className="py-1 px-2.5 rounded-lg bg-rose-500 text-white text-xs font-bold disabled:opacity-50"
+              className="py-1 px-2.5 rounded-lg bg-rose-600 text-white text-xs font-bold disabled:opacity-50"
             >
               {excluindo ? '...' : 'Excluir'}
             </button>
