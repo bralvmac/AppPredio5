@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Navbar } from './components/Navbar';
 import { FiltrosBusca } from './components/FiltrosBusca';
 import { CardRoteiro } from './components/CardRoteiro';
 import { PastaRoteirosView } from './components/PastaRoteirosView';
@@ -159,22 +158,17 @@ export const App: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col bg-glow-radial">
       
-      {/* Navbar Superior com Título, Status e Botão de Cadastrar */}
-      <Navbar
-        totalRoteiros={roteiros.length}
-        onOpenUploadModal={() => setUploadModalAberto(true)}
-      />
-
-      {/* Conteúdo Principal: Apenas Área de Busca, Filtros e Lista de Roteiros */}
+      {/* Conteúdo Principal Ultra Limpo (Sem Barra Superior) */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
         
-        {/* Componente de Filtros de Pesquisa */}
+        {/* Busca, Filtros e Botão Cadastrar Roteiro */}
         <FiltrosBusca
           filtros={filtros}
           opcoes={opcoesFiltros}
           onFiltroChange={setFiltros}
           onLimparFiltros={handleLimparFiltros}
           totalResultados={roteirosFiltrados.length}
+          onOpenUploadModal={() => setUploadModalAberto(true)}
         />
 
         {/* Alternador de Modo de Visualização (Pastas x Grade) */}
