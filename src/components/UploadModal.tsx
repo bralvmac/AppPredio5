@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { X, UploadCloud, FileCheck, AlertCircle, PlusCircle, CheckCircle2, Loader2 } from 'lucide-react';
+import { X, UploadCloud, AlertCircle, CheckCircle2, Loader2, Sparkles, FileText } from 'lucide-react';
 import { Roteiro, TipoCurso, ModeloComponente } from '../types/roteiro';
 import { cadastrarRoteiro, isSupabaseConfigured } from '../lib/supabaseClient';
+import { extrairMetadadosDoPdf } from '../lib/pdfExtractor';
 
 interface UploadModalProps {
   isOpen: boolean;
@@ -40,10 +41,78 @@ export const UploadModal: React.FC<UploadModalProps> = ({
   const [arquivoPdf, setArquivoPdf] = useState<File | null>(null);
   const [urlPdfManual, setUrlPdfManual] = useState('');
 
+  const [analisandoPdf, setAnalisandoPdf] = useState(false);
+  const [metadadosExtraidos, setMetadadosExtraidos] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
   if (!isOpen) return null;
+
+  // Manipulador de Seleção de PDF com Leitura Inteligente Automática
+  const handlePdfFileChange = async (file: File | null) => {
+    setArquivoPdf(file);
+    setMetadadosExtraidos(false);
+
+    if (!file) return;
+
+    try {
+      setAnalisandoPdf(true);
+      const meta = await extrairMetadadosDoPdf(file);
+
+      if (meta.titulo && !titulo) setTitulo(meta.titulo);
+      if (meta.tema && !tema) setTema(meta.tema);
+      if (meta.tipoCurso) setTipoCurso(meta.tipoCurso);
+      if (meta.modeloComponente) setModeloComponente(meta.modeloComponente);
+      if (meta.duracaoMinutos) setDuracaoMinutos(meta.duracaoMinutos);
+      if (meta.laboratorioTipo && !laboratorioTipo) setLaboratorioTipo(meta.laboratorioTipo);
+
+      // Preenchimento inteligente do Curso
+      if (meta.curso) {
+        if (opcoesExistentes.cursos.includes(meta.curso)) {
+          setCurso(meta.curso);
+        } else {
+          setCurso('__novo__');
+          setCursoNovo(meta.curso);
+        }
+      }
+
+      // Preenchimento inteligente da Disciplina
+      if (meta.disciplina) {
+        if (opcoesExistentes.disciplinas.includes(meta.disciplina)) {
+          setDisciplina(meta.disciplina);
+        } else {
+          setDisciplina('__novo__');
+          setDisciplinaNova(meta.disciplina);
+        }
+      }
+
+      // Preenchimento inteligente do Docente
+      if (meta.docente) {
+        if (opcoesExistentes.docentes.includes(meta.docente)) {
+          setDocente(meta.docente);
+        } else {
+          setDocente('__novo__');
+          setDocenteNovo(meta.docente);
+        }
+      }
+
+      // Preenchimento inteligente do Tutor
+      if (meta.tutor) {
+        if (opcoesExistentes.tutores.includes(meta.tutor)) {
+          setTutor(meta.tutor);
+        } else {
+          setTutor('__novo__');
+          setTutorNovo(meta.tutor);
+        }
+      }
+
+      setMetadadosExtraidos(true);
+    } catch (err) {
+      console.warn("Não foi possível ler o texto do PDF automaticamente.", err);
+    } finally {
+      setAnalisandoPdf(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -113,6 +182,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
     setLaboratorioTipo('');
     setArquivoPdf(null);
     setUrlPdfManual('');
+    setMetadadosExtraidos(false);
     setErro(null);
   };
 
@@ -129,7 +199,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
             </div>
             <div>
               <h2 className="text-lg font-bold text-white">Cadastrar Novo Roteiro de Aula Prática</h2>
-              <p className="text-xs text-slate-400">Faça o upload do PDF e associe as informações do componente curricular</p>
+              <p className="text-xs text-slate-400">Faça o upload do PDF e deixe a IA extrair as informações automaticamente</p>
             </div>
           </div>
           <button
@@ -140,13 +210,15 @@ export const UploadModal: React.FC<UploadModalProps> = ({
           </button>
         </div>
 
-        {/* Mensagem de alerta Supabase */}
-        {!isSupabaseConfigured && (
-          <div className="px-6 py-2.5 bg-amber-500/10 border-b border-amber-500/20 text-amber-300 text-xs flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 shrink-0" />
-            <span>
-              <strong>Modo Demonstração:</strong> Como o Supabase não está configurado, o arquivo será salvo localmente para teste instantâneo.
-            </span>
+        {/* Notificação de Leitura Automática de PDF */}
+        {metadadosExtraidos && (
+          <div className="px-6 py-3 bg-brand-500/15 border-b border-brand-500/30 text-brand-300 text-xs flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-brand-400 shrink-0" />
+              <span>
+                <strong>Leitura Automática:</strong> As informações foram identificadas no PDF e preenchidas abaixo! Você pode revisar ou alterar qualquer campo.
+              </span>
+            </div>
           </div>
         )}
 
@@ -162,23 +234,37 @@ export const UploadModal: React.FC<UploadModalProps> = ({
           
           {/* Seção 1: Upload do Arquivo PDF */}
           <div className="p-4 rounded-xl bg-slate-900/90 border border-slate-800">
-            <label className="block text-xs font-bold text-slate-200 uppercase tracking-wider mb-2">
-              1. Arquivo do Roteiro (Formato PDF) *
+            <label className="block text-xs font-bold text-slate-200 uppercase tracking-wider mb-2 flex items-center justify-between">
+              <span>1. Arquivo do Roteiro (Formato PDF) *</span>
+              <span className="text-emerald-400 text-[11px] font-normal flex items-center gap-1">
+                <Sparkles className="w-3 h-3" /> Auto-Extração Ativa
+              </span>
             </label>
             
             <div className="flex flex-col sm:flex-row items-center gap-4">
-              <label className="flex-1 w-full flex flex-col items-center justify-center p-5 border-2 border-dashed border-slate-700 hover:border-brand-500/50 rounded-xl cursor-pointer bg-slate-950/60 transition-colors">
-                <UploadCloud className="w-8 h-8 text-brand-400 mb-2" />
-                <span className="text-xs font-semibold text-slate-200">
-                  {arquivoPdf ? arquivoPdf.name : 'Clique para selecionar o PDF do Roteiro'}
-                </span>
-                <span className="text-[11px] text-slate-500 mt-1">
-                  {arquivoPdf ? `${(arquivoPdf.size / (1024 * 1024)).toFixed(2)} MB` : 'PDF até 25MB'}
-                </span>
+              <label className="flex-1 w-full flex flex-col items-center justify-center p-5 border-2 border-dashed border-slate-700 hover:border-brand-500/50 rounded-xl cursor-pointer bg-slate-950/60 transition-colors relative">
+                
+                {analisandoPdf ? (
+                  <div className="flex flex-col items-center py-2">
+                    <Loader2 className="w-8 h-8 text-brand-400 animate-spin mb-2" />
+                    <span className="text-xs font-semibold text-brand-300">Lendo PDF e identificando informações...</span>
+                  </div>
+                ) : (
+                  <>
+                    <UploadCloud className="w-8 h-8 text-brand-400 mb-2" />
+                    <span className="text-xs font-semibold text-slate-200 text-center">
+                      {arquivoPdf ? arquivoPdf.name : 'Clique para selecionar o PDF do Roteiro'}
+                    </span>
+                    <span className="text-[11px] text-slate-500 mt-1">
+                      {arquivoPdf ? `${(arquivoPdf.size / (1024 * 1024)).toFixed(2)} MB` : 'O sistema lerá os dados do PDF automaticamente'}
+                    </span>
+                  </>
+                )}
+
                 <input
                   type="file"
                   accept="application/pdf"
-                  onChange={(e) => setArquivoPdf(e.target.files?.[0] || null)}
+                  onChange={(e) => handlePdfFileChange(e.target.files?.[0] || null)}
                   className="hidden"
                 />
               </label>
@@ -419,7 +505,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
             </button>
             <button
               type="submit"
-              disabled={salvando}
+              disabled={salvando || analisandoPdf}
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-brand-500 to-teal-400 hover:from-brand-400 hover:to-teal-300 text-slate-950 text-xs font-extrabold shadow-lg shadow-brand-500/20 transition-all disabled:opacity-50"
             >
               {salvando ? (
