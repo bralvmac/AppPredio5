@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Folder, FolderOpen, ChevronRight, ChevronDown, FileText, GraduationCap, Eye, Download, Share2, Trash2, Check, AlertTriangle, Layers, Building2, User } from 'lucide-react';
+import { Folder, FolderOpen, ChevronRight, ChevronDown, FileText, Eye, Download, Share2, Trash2, Check, AlertTriangle, Building2 } from 'lucide-react';
 import { Roteiro } from '../types/roteiro';
 
 interface PastaRoteirosViewProps {
@@ -13,9 +13,10 @@ export const PastaRoteirosView: React.FC<PastaRoteirosViewProps> = ({
   onOpenPdf,
   onDeletar
 }) => {
-  // Agrupa os roteiros por Curso
+  // Agrupa os roteiros por Curso e ordena Alfabeticamente por Título (A-Z)
   const roteirosPorCurso = React.useMemo(() => {
     const grupos: { [curso: string]: Roteiro[] } = {};
+    
     roteiros.forEach(r => {
       const cursoNome = r.curso ? r.curso.trim() : 'Sem Curso Definido';
       if (!grupos[cursoNome]) {
@@ -23,6 +24,14 @@ export const PastaRoteirosView: React.FC<PastaRoteirosViewProps> = ({
       }
       grupos[cursoNome].push(r);
     });
+
+    // Ordenação Alfabética Natural por Título (Aula Prática 1, Aula Prática 2, Aula Prática 3...)
+    Object.keys(grupos).forEach(curso => {
+      grupos[curso].sort((a, b) => 
+        a.titulo.localeCompare(b.titulo, 'pt-BR', { numeric: true, sensitivity: 'base' })
+      );
+    });
+
     return grupos;
   }, [roteiros]);
 
@@ -48,7 +57,7 @@ export const PastaRoteirosView: React.FC<PastaRoteirosViewProps> = ({
     setPastasAbertas(novoEstado);
   };
 
-  const cursos = Object.keys(roteirosPorCurso).sort();
+  const cursos = Object.keys(roteirosPorCurso).sort((a, b) => a.localeCompare(b, 'pt-BR'));
 
   return (
     <div className="space-y-4 animate-fade-in">
@@ -80,7 +89,6 @@ export const PastaRoteirosView: React.FC<PastaRoteirosViewProps> = ({
       <div className="space-y-3">
         {cursos.map((cursoNome) => {
           const listaRoteiros = roteirosPorCurso[cursoNome];
-          // Se não foi clicado ainda, fica aberta por padrão
           const estaAberta = pastasAbertas[cursoNome] !== false;
 
           return (
@@ -122,7 +130,7 @@ export const PastaRoteirosView: React.FC<PastaRoteirosViewProps> = ({
                 </div>
               </button>
 
-              {/* Conteúdo Interno da Pasta (Lista de Arquivos) */}
+              {/* Conteúdo Interno da Pasta (Lista de Arquivos Ordenados A-Z) */}
               {estaAberta && (
                 <div className="p-3 sm:p-4 bg-slate-950/60 border-t border-slate-800/80 space-y-2.5">
                   {listaRoteiros.map((roteiro) => (
@@ -145,7 +153,7 @@ export const PastaRoteirosView: React.FC<PastaRoteirosViewProps> = ({
   );
 };
 
-// Linha Estilo Arquivo do Windows Explorer
+// Linha Estilo Arquivo do Windows Explorer com Badges Coloridas Vibrantes
 const ItemRoteiroArquivoRow: React.FC<{
   roteiro: Roteiro;
   onOpenPdf: (roteiro: Roteiro) => void;
@@ -173,6 +181,9 @@ const ItemRoteiroArquivoRow: React.FC<{
     }
   };
 
+  const isPresencial = roteiro.tipoCurso === 'Presencial';
+  const isBasico = roteiro.modeloComponente === 'Básico';
+
   return (
     <div className="glass-card-interactive rounded-xl p-3.5 sm:p-4 border border-slate-800/80 hover:border-brand-500/40 transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 relative group">
       
@@ -184,16 +195,29 @@ const ItemRoteiroArquivoRow: React.FC<{
 
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2 mb-1">
-            <span className="text-xs font-bold text-white group-hover:text-emerald-300 transition-colors line-clamp-1">
+            <span className="text-xs sm:text-sm font-bold text-white group-hover:text-emerald-300 transition-colors line-clamp-1">
               {roteiro.titulo}
             </span>
+
+            {/* Badge Tipo de Curso Colorida */}
             {roteiro.tipoCurso && (
-              <span className="text-[10px] px-2 py-0.5 rounded bg-slate-900 text-slate-300 border border-slate-800">
+              <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-semibold border ${
+                isPresencial
+                  ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                  : 'bg-indigo-500/10 text-indigo-400 border-indigo-500/20'
+              }`}>
+                <Building2 className="w-3 h-3 mr-1" />
                 {roteiro.tipoCurso}
               </span>
             )}
+
+            {/* Badge Modelo Componente Colorida */}
             {roteiro.modeloComponente && (
-              <span className="text-[10px] px-2 py-0.5 rounded bg-slate-900 text-slate-300 border border-slate-800">
+              <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-semibold border ${
+                isBasico
+                  ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20'
+                  : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+              }`}>
                 {roteiro.modeloComponente}
               </span>
             )}
@@ -217,7 +241,7 @@ const ItemRoteiroArquivoRow: React.FC<{
       <div className="flex items-center gap-2 w-full sm:w-auto justify-end pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-800/60">
         <button
           onClick={() => onOpenPdf(roteiro)}
-          className="inline-flex items-center justify-center px-3 py-1.5 rounded-lg text-xs font-bold text-slate-950 bg-gradient-to-r from-emerald-400 to-teal-400 hover:from-emerald-300 hover:to-teal-300 transition-colors shadow-sm"
+          className="inline-flex items-center justify-center px-3.5 py-1.5 rounded-lg text-xs font-bold text-slate-950 bg-gradient-to-r from-emerald-400 to-teal-400 hover:from-emerald-300 hover:to-teal-300 transition-colors shadow-sm"
         >
           <Eye className="w-3.5 h-3.5 mr-1 stroke-[2.5]" />
           <span>Visualizar</span>

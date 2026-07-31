@@ -91,16 +91,16 @@ export const App: React.FC = () => {
     });
 
     return {
-      cursos: Array.from(cursosSet).sort(),
-      docentes: Array.from(docentesSet).sort(),
-      disciplinas: Array.from(disciplinasSet).sort(),
-      temas: Array.from(temasSet).sort(),
+      cursos: Array.from(cursosSet).sort((a, b) => a.localeCompare(b, 'pt-BR')),
+      docentes: Array.from(docentesSet).sort((a, b) => a.localeCompare(b, 'pt-BR')),
+      disciplinas: Array.from(disciplinasSet).sort((a, b) => a.localeCompare(b, 'pt-BR')),
+      temas: Array.from(temasSet).sort((a, b) => a.localeCompare(b, 'pt-BR')),
     };
   }, [roteiros]);
 
-  // Algoritmo de filtragem rápida e combinada
+  // Algoritmo de filtragem rápida e ordenação alfabética natural (A-Z)
   const roteirosFiltrados = useMemo(() => {
-    return roteiros.filter(r => {
+    const filtrados = roteiros.filter(r => {
       // 1. Busca Geral (Texto Livre)
       if (filtros.buscaGeral.trim()) {
         const termo = filtros.buscaGeral.toLowerCase();
@@ -128,6 +128,11 @@ export const App: React.FC = () => {
 
       return true;
     });
+
+    // Ordena Alfabeticamente por Título (Aula Prática 1, Aula Prática 2, Aula Prática 3...)
+    return filtrados.sort((a, b) => 
+      a.titulo.localeCompare(b.titulo, 'pt-BR', { numeric: true, sensitivity: 'base' })
+    );
   }, [roteiros, filtros]);
 
   const handleLimparFiltros = () => {
@@ -160,7 +165,7 @@ export const App: React.FC = () => {
         onOpenUploadModal={() => setUploadModalAberto(true)}
       />
 
-      {/* Conteúdo Principal */}
+      {/* Conteúdo Principal: Apenas Área de Busca, Filtros e Lista de Roteiros */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
         
         {/* Componente de Filtros de Pesquisa */}
