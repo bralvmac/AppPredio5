@@ -230,8 +230,8 @@ export const App: React.FC = () => {
         {/* Alternador de Modo de Visualização (Pastas x Grade) */}
         {!carregando && roteirosFiltrados.length > 0 && (
           <div className="flex items-center justify-between mb-5">
-            <span className={`text-xs font-bold uppercase tracking-wider ${
-              isDark ? 'text-slate-400' : 'text-slate-500'
+            <span className={`text-xs font-black uppercase tracking-wider ${
+              isDark ? 'text-slate-400' : 'text-slate-900'
             }`}>
               Exibição dos Roteiros
             </span>
@@ -242,10 +242,10 @@ export const App: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setModoVisualizacao('pastas')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
                   modoVisualizacao === 'pastas'
-                    ? 'bg-brand-500 text-slate-950 font-bold shadow-sm'
-                    : isDark ? 'text-slate-400 hover:text-slate-200' : 'text-slate-600 hover:text-slate-900'
+                    ? 'bg-brand-500 text-slate-950 font-extrabold shadow-sm'
+                    : isDark ? 'text-slate-400 hover:text-slate-200' : 'text-slate-700 hover:text-slate-950'
                 }`}
               >
                 <FolderTree className="w-3.5 h-3.5" />
@@ -255,10 +255,10 @@ export const App: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setModoVisualizacao('grade')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
                   modoVisualizacao === 'grade'
-                    ? 'bg-cyan-500 text-slate-950 font-bold shadow-sm'
-                    : isDark ? 'text-slate-400 hover:text-slate-200' : 'text-slate-600 hover:text-slate-900'
+                    ? 'bg-cyan-500 text-slate-950 font-extrabold shadow-sm'
+                    : isDark ? 'text-slate-400 hover:text-slate-200' : 'text-slate-700 hover:text-slate-950'
                 }`}
               >
                 <LayoutGrid className="w-3.5 h-3.5" />
@@ -300,23 +300,23 @@ export const App: React.FC = () => {
         ) : (
 
           /* Estado Sem Resultados */
-          <div className={`glass-panel rounded-2xl p-12 text-center max-w-lg mx-auto border my-8 ${
-            isDark ? 'border-slate-800' : 'border-slate-300'
+          <div className={`rounded-2xl p-12 text-center max-w-lg mx-auto border my-8 shadow-md ${
+            isDark ? 'glass-panel border-slate-800' : 'bg-white border-slate-300 text-slate-900'
           }`}>
             <div className={`w-16 h-16 rounded-full border flex items-center justify-center mx-auto mb-4 ${
-              isDark ? 'bg-slate-900 border-slate-800 text-slate-500' : 'bg-slate-200 border-slate-300 text-slate-400'
+              isDark ? 'bg-slate-900 border-slate-800 text-slate-500' : 'bg-slate-100 border-slate-300 text-slate-600'
             }`}>
               <SearchX className="w-8 h-8" />
             </div>
-            <h3 className={`text-lg font-bold mb-1 ${isDark ? 'text-white' : 'text-slate-900'}`}>
+            <h3 className={`text-lg font-extrabold mb-1 ${isDark ? 'text-white' : 'text-slate-950'}`}>
               Nenhum roteiro encontrado
             </h3>
-            <p className={`text-xs mb-6 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+            <p className={`text-xs mb-6 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
               Não encontramos nenhum roteiro com a combinação de filtros selecionada. Tente ajustar os parâmetros ou limpar a busca.
             </p>
             <button
               onClick={handleLimparFiltros}
-              className="inline-flex items-center px-4 py-2.5 rounded-xl text-xs font-bold text-slate-950 bg-brand-400 hover:bg-brand-300 transition-colors shadow-md shadow-brand-500/20"
+              className="inline-flex items-center px-4 py-2.5 rounded-xl text-xs font-extrabold text-slate-950 bg-brand-400 hover:bg-brand-300 transition-colors shadow-md shadow-brand-500/20"
             >
               Limpar Todos os Filtros
             </button>
