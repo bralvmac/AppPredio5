@@ -34,13 +34,13 @@ export async function buscarRoteiros(): Promise<Roteiro[]> {
           id: item.id,
           titulo: item.titulo,
           tema: item.tema,
-          curso: item.curso,
-          tipoCurso: item.tipo_curso,
-          modeloComponente: item.modelo_componente,
-          disciplina: item.disciplina,
-          docente: item.docente,
-          tutor: item.tutor || item.docente,
-          descricao: item.descricao,
+          curso: item.curso || 'Geral',
+          tipoCurso: item.tipo_curso || 'Presencial',
+          modeloComponente: item.modelo_componente || 'Básico',
+          disciplina: item.disciplina || 'Geral',
+          docente: item.docente || 'Não informado',
+          tutor: item.tutor || item.docente || 'Não informado',
+          descricao: item.descricao || '',
           pdfUrl: item.pdf_url,
           arquivoPath: item.arquivo_path,
           dataCriacao: item.created_at ? new Date(item.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
@@ -65,106 +65,108 @@ export async function buscarRoteiros(): Promise<Roteiro[]> {
   return MOCK_ROTEIROS;
 }
 
-// Função utilitária para cadastrar novo roteiro com upload de PDF
+// Função utilitária para cadastrar 1 roteiro individual com PDF
 export async function cadastrarRoteiro(
   novo: Omit<Roteiro, 'id' | 'dataCriacao'>,
   pdfArquivo?: File
 ): Promise<Roteiro> {
-  let finalPdfUrl = novo.pdfUrl;
-  let finalFilePath = '';
+  const [criado] = await cadastrarRoteirosEmLote([{ dados: novo, pdfArquivo }]);
+  return criado;
+}
 
-  // 1. Tenta upload no Supabase Storage se configurado e com arquivo
-  if (isSupabaseConfigured && supabase && pdfArquivo) {
-    try {
-      const fileName = `${Date.now()}_${pdfArquivo.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
-      const { data: uploadData, error: uploadError } = await supabase
-        .storage
-        .from('roteiros-pdf')
-        .upload(fileName, pdfArquivo, {
-          cacheControl: '3600',
-          upsert: false
-        });
+// Função utilitária para cadastrar MÚLTIPLOS roteiros em lote
+export async function cadastrarRoteirosEmLote(
+  itens: Array<{ dados: Omit<Roteiro, 'id' | 'dataCriacao'>; pdfArquivo?: File }>
+): Promise<Roteiro[]> {
+  const roteirosCriados: Roteiro[] = [];
 
-      if (uploadError) {
-        console.error("Erro no upload do PDF para o Supabase Storage:", uploadError);
-      } else if (uploadData) {
-        finalFilePath = uploadData.path;
-        const { data: publicUrlData } = supabase
+  for (const item of itens) {
+    let finalPdfUrl = item.dados.pdfUrl;
+    let finalFilePath = '';
+
+    // 1. Upload do arquivo PDF individual se houver Supabase
+    if (isSupabaseConfigured && supabase && item.pdfArquivo) {
+      try {
+        const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 7)}_${item.pdfArquivo.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+        const { data: uploadData, error: uploadError } = await supabase
           .storage
           .from('roteiros-pdf')
-          .getPublicUrl(uploadData.path);
-        
-        if (publicUrlData?.publicUrl) {
-          finalPdfUrl = publicUrlData.publicUrl;
-        }
-      }
-    } catch (err) {
-      console.warn("Falha no upload do Supabase Storage, utilizando URL informada/fallback local.", err);
-    }
-  }
+          .upload(fileName, item.pdfArquivo, {
+            cacheControl: '3600',
+            upsert: false
+          });
 
-  const roteiroCriado: Roteiro = {
-    ...novo,
-    id: `rot-${Date.now()}`,
-    pdfUrl: finalPdfUrl,
-    arquivoPath: finalFilePath,
-    dataCriacao: new Date().toISOString().split('T')[0]
-  };
-
-  // 2. Tenta salvar no Supabase DB se configurado
-  if (isSupabaseConfigured && supabase) {
-    try {
-      const { data, error } = await supabase
-        .from('roteiros')
-        .insert([
-          {
-            titulo: novo.titulo,
-            tema: novo.tema,
-            curso: novo.curso,
-            tipo_curso: novo.tipoCurso,
-            modelo_componente: novo.modeloComponente,
-            disciplina: novo.disciplina,
-            docente: novo.docente,
-            tutor: novo.docente,
-            descricao: novo.descricao || '',
-            pdf_url: finalPdfUrl,
-            arquivo_path: finalFilePath
+        if (uploadError) {
+          console.error("Erro no upload do PDF para o Supabase Storage:", uploadError);
+        } else if (uploadData) {
+          finalFilePath = uploadData.path;
+          const { data: publicUrlData } = supabase
+            .storage
+            .from('roteiros-pdf')
+            .getPublicUrl(uploadData.path);
+          
+          if (publicUrlData?.publicUrl) {
+            finalPdfUrl = publicUrlData.publicUrl;
           }
-        ])
-        .select()
-        .single();
-
-      if (error) {
-        console.error("Erro ao salvar no banco Supabase:", error);
-      } else if (data) {
-        return {
-          id: data.id,
-          titulo: data.titulo,
-          tema: data.tema,
-          curso: data.curso,
-          tipoCurso: data.tipo_curso,
-          modeloComponente: data.modelo_componente,
-          disciplina: data.disciplina,
-          docente: data.docente,
-          tutor: data.tutor,
-          descricao: data.descricao,
-          pdfUrl: data.pdf_url,
-          arquivoPath: data.arquivo_path,
-          dataCriacao: data.created_at ? new Date(data.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
-        };
+        }
+      } catch (err) {
+        console.warn("Falha no upload do Supabase Storage, utilizando URL informada/fallback local.", err);
       }
-    } catch (err) {
-      console.warn("Salvando localmente devido a falha de conexão com o banco.", err);
     }
+
+    const objetoRoteiro: Roteiro = {
+      ...item.dados,
+      curso: item.dados.curso || 'Geral',
+      tipoCurso: item.dados.tipoCurso || 'Presencial',
+      modeloComponente: item.dados.modeloComponente || 'Básico',
+      disciplina: item.dados.disciplina || 'Geral',
+      docente: item.dados.docente || 'Não informado',
+      id: `rot-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      pdfUrl: finalPdfUrl,
+      arquivoPath: finalFilePath,
+      dataCriacao: new Date().toISOString().split('T')[0]
+    };
+
+    // 2. Salva no banco de dados do Supabase
+    if (isSupabaseConfigured && supabase) {
+      try {
+        const { data, error } = await supabase
+          .from('roteiros')
+          .insert([
+            {
+              titulo: objetoRoteiro.titulo,
+              tema: objetoRoteiro.tema,
+              curso: objetoRoteiro.curso,
+              tipo_curso: objetoRoteiro.tipoCurso,
+              modelo_componente: objetoRoteiro.modeloComponente,
+              disciplina: objetoRoteiro.disciplina,
+              docente: objetoRoteiro.docente,
+              tutor: objetoRoteiro.docente,
+              descricao: objetoRoteiro.descricao || '',
+              pdf_url: finalPdfUrl,
+              arquivo_path: finalFilePath
+            }
+          ])
+          .select()
+          .single();
+
+        if (!error && data) {
+          objetoRoteiro.id = data.id;
+        }
+      } catch (err) {
+        console.warn("Erro ao salvar registro individual no Supabase DB:", err);
+      }
+    }
+
+    roteirosCriados.push(objetoRoteiro);
   }
 
-  // 3. Fallback Local Storage
+  // 3. Atualiza LocalStorage como Fallback
   const locaisStr = localStorage.getItem(STORAGE_KEY);
   const locais = locaisStr ? JSON.parse(locaisStr) : [];
-  locais.unshift(roteiroCriado);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(locais));
+  localStorage.setItem(STORAGE_KEY, JSON.stringify([...roteirosCriados, ...locais]));
 
-  return roteiroCriado;
+  return roteirosCriados;
 }
 
 // Função utilitária para excluir roteiro (do Supabase DB, Storage e LocalStorage)
