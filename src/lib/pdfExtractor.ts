@@ -41,10 +41,11 @@ export async function extrairMetadadosDoPdf(file: File): Promise<ExtractedPdfMet
   };
 
   if (textContent) {
-    // 2. Extração da Unidade Curricular (Disciplina)
+    // 2. Extração da Unidade Curricular
     const matchUnidade = 
       textContent.match(/Unidade\s+Curricular\s*:\s*([^\n\r]+)/i) ||
-      textContent.match(/(?:disciplina|mat[ée]ria|componente curricular)\s*:\s*([^\n\r]+)/i);
+      textContent.match(/Componente\s+Curricular\s*:\s*([^\n\r]+)/i) ||
+      textContent.match(/(?:disciplina|mat[ée]ria)\s*:\s*([^\n\r]+)/i);
 
     if (matchUnidade?.[1]) {
       resultado.unidadeCurricular = isolarValorCampo(matchUnidade[1]);
@@ -65,13 +66,13 @@ export async function extrairMetadadosDoPdf(file: File): Promise<ExtractedPdfMet
 
 /**
  * Isola estritamente o valor do campo interrompendo assim que encontrar
- * delimitadores conhecidos de seções seguintes como "Aula Prática:", "COMPETÊNCIAS", "Tema:", etc.
+ * delimitadores conhecidos de seções seguintes como "Tema:", "Aula Prática:", "COMPETÊNCIAS", etc.
  */
 function isolarValorCampo(textoBruto: string): string {
   if (!textoBruto) return '';
 
-  // Interrompe o texto antes de seções como "Aula Prática", "COMPETÊNCIAS", "Tema:", "Unidade Curricular:", números de tópicos, etc.
-  const textoCortado = textoBruto.split(/\s+(?:Aula\s+Pr[áa]tica|COMPET[ÊE]NCIAS|Tema\s*:|Unidade\s+Curricular\s*:|OBJETIV|INTRODU|DESCRIT|MATERIA|EQUIPAM|PROCEDIM|1\.)/i)[0];
+  // Interrompe o texto antes de seções como "Tema:", "Aula Prática", "COMPETÊNCIAS", "Unidade Curricular:", etc.
+  const textoCortado = textoBruto.split(/\s+(?:Tema\s*:|Aula\s+Pr[áa]tica|COMPET[ÊE]NCIAS|Unidade\s+Curricular\s*:|OBJETIV|INTRODU|DESCRIT|MATERIA|EQUIPAM|PROCEDIM|1\.)/i)[0];
 
   return textoCortado
     .replace(/^[\s:–-]+/, '')

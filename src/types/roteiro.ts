@@ -1,5 +1,5 @@
-export type TipoCurso = 'Presencial' | 'Semi-presencial';
-export type ModeloComponente = 'Básico' | 'Específico';
+export type TipoCurso = 'Presencial' | 'Semi-presencial' | '';
+export type ModeloComponente = 'Básico' | 'Específico' | '';
 
 export interface Roteiro {
   id: string;

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { X, UploadCloud, AlertCircle, CheckCircle2, Loader2, Sparkles, Trash2, Layers, Check, Copy } from 'lucide-react';
+import { X, UploadCloud, AlertCircle, CheckCircle2, Loader2, Sparkles, Trash2, Layers } from 'lucide-react';
 import { Roteiro, TipoCurso, ModeloComponente } from '../types/roteiro';
-import { cadastrarRoteirosEmLote, isSupabaseConfigured } from '../lib/supabaseClient';
+import { cadastrarRoteirosEmLote } from '../lib/supabaseClient';
 import { extrairMetadadosDoPdf } from '../lib/pdfExtractor';
 
 interface UploadModalProps {
@@ -21,13 +21,10 @@ interface ItemRoteiroEmLote {
   titulo: string;
   tema: string;
   curso: string;
-  cursoNovo: string;
   tipoCurso: TipoCurso;
   modeloComponente: ModeloComponente;
-  disciplina: string;
-  disciplinaNova: string;
-  docente: string;
-  docenteNovo: string;
+  disciplina: string; // Unidade Curricular
+  docente: string; // Docente / Tutor
   urlPdfManual: string;
 }
 
@@ -42,15 +39,15 @@ export const UploadModal: React.FC<UploadModalProps> = ({
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
-  // Estado do Aplicador em Lote Global
+  // Estado do Aplicador em Lote Global (Sem opção pré-selecionada)
   const [globalCurso, setGlobalCurso] = useState('');
-  const [globalTipoCurso, setGlobalTipoCurso] = useState<TipoCurso>('Presencial');
-  const [globalModelo, setGlobalModelo] = useState<ModeloComponente>('Básico');
+  const [globalTipoCurso, setGlobalTipoCurso] = useState<TipoCurso>('');
+  const [globalModelo, setGlobalModelo] = useState<ModeloComponente>('');
   const [globalDocente, setGlobalDocente] = useState('');
 
   if (!isOpen) return null;
 
-  // Seleção de Múltiplos Arquivos PDF com Extração Individual para cada Roteiro
+  // Seleção de Múltiplos Arquivos PDF com Extração da Unidade Curricular e Tema
   const handleSelecionarArquivos = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
@@ -63,12 +60,12 @@ export const UploadModal: React.FC<UploadModalProps> = ({
     for (const file of files) {
       const nomeSemExtensao = file.name.replace(/\.pdf$/i, '').replace(/_/g, ' ').trim();
       let temaExtraido = nomeSemExtensao;
-      let disciplinaExtraida = '';
+      let unidadeExtraida = '';
 
       try {
         const meta = await extrairMetadadosDoPdf(file);
         if (meta.tema) temaExtraido = meta.tema;
-        if (meta.unidadeCurricular) disciplinaExtraida = meta.unidadeCurricular;
+        if (meta.unidadeCurricular) unidadeExtraida = meta.unidadeCurricular;
       } catch (err) {
         console.warn(`Erro ao ler o PDF ${file.name}:`, err);
       }
@@ -79,23 +76,19 @@ export const UploadModal: React.FC<UploadModalProps> = ({
         titulo: nomeSemExtensao,
         tema: temaExtraido,
         curso: globalCurso || '',
-        cursoNovo: '',
-        tipoCurso: globalTipoCurso || 'Presencial',
-        modeloComponente: globalModelo || 'Básico',
-        disciplina: disciplinaExtraida || '',
-        disciplinaNova: '',
+        tipoCurso: globalTipoCurso || '', // Sem pré-seleção
+        modeloComponente: globalModelo || '', // Sem pré-seleção
+        disciplina: unidadeExtraida || '', // Unidade Curricular Extraída
         docente: globalDocente || '',
-        docenteNovo: '',
         urlPdfManual: ''
       });
     }
 
     setItens(prev => [...prev, ...novosItens]);
     setLendoArquivos(false);
-    e.target.value = ''; // reseta input de arquivo
+    e.target.value = '';
   };
 
-  // Adicionar item manual em branco se quiser
   const handleAdicionarItemManual = () => {
     setItens(prev => [
       ...prev,
@@ -104,13 +97,10 @@ export const UploadModal: React.FC<UploadModalProps> = ({
         titulo: '',
         tema: '',
         curso: globalCurso || '',
-        cursoNovo: '',
-        tipoCurso: globalTipoCurso || 'Presencial',
-        modeloComponente: globalModelo || 'Básico',
+        tipoCurso: globalTipoCurso || '',
+        modeloComponente: globalModelo || '',
         disciplina: '',
-        disciplinaNova: '',
         docente: globalDocente || '',
-        docenteNovo: '',
         urlPdfManual: ''
       }
     ]);
@@ -129,18 +119,16 @@ export const UploadModal: React.FC<UploadModalProps> = ({
     }));
   };
 
-  // Aplica dados globais (Curso, Tipo, Modelo, Docente) para TODOS os roteiros da lista
   const handleAplicarParaTodos = () => {
     setItens(prev => prev.map(item => ({
       ...item,
       curso: globalCurso || item.curso,
-      tipoCurso: globalTipoCurso || item.tipoCurso,
-      modeloComponente: globalModelo || item.modeloComponente,
+      tipoCurso: globalTipoCurso !== '' ? globalTipoCurso : item.tipoCurso,
+      modeloComponente: globalModelo !== '' ? globalModelo : item.modeloComponente,
       docente: globalDocente || item.docente
     })));
   };
 
-  // Envio final de todos os roteiros da lista
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErro(null);
@@ -150,7 +138,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
       return;
     }
 
-    // Validação: Apenas TÍTULO e TEMA são obrigatórios!
+    // Apenas TÍTULO e TEMA são obrigatórios!
     for (let i = 0; i < itens.length; i++) {
       const item = itens[i];
       if (!item.titulo.trim() || !item.tema.trim()) {
@@ -166,12 +154,12 @@ export const UploadModal: React.FC<UploadModalProps> = ({
         dados: {
           titulo: item.titulo.trim(),
           tema: item.tema.trim(),
-          curso: (item.curso === '__novo__' ? item.cursoNovo : item.curso) || 'Geral',
-          tipoCurso: item.tipoCurso,
-          modeloComponente: item.modeloComponente,
-          disciplina: (item.disciplina === '__novo__' ? item.disciplinaNova : item.disciplina) || 'Geral',
-          docente: (item.docente === '__novo__' ? item.docenteNovo : item.docente) || 'Não informado',
-          tutor: (item.docente === '__novo__' ? item.docenteNovo : item.docente) || 'Não informado',
+          curso: item.curso.trim() || 'Geral',
+          tipoCurso: item.tipoCurso || 'Presencial',
+          modeloComponente: item.modeloComponente || 'Básico',
+          disciplina: item.disciplina.trim() || 'Geral',
+          docente: item.docente.trim() || 'Não informado',
+          tutor: item.docente.trim() || 'Não informado',
           pdfUrl: item.urlPdfManual || 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf'
         },
         pdfArquivo: item.arquivoPdf
@@ -193,12 +181,25 @@ export const UploadModal: React.FC<UploadModalProps> = ({
     setItens([]);
     setErro(null);
     setGlobalCurso('');
+    setGlobalTipoCurso('');
+    setGlobalModelo('');
     setGlobalDocente('');
   };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/90 backdrop-blur-md animate-fade-in overflow-y-auto">
       
+      {/* Datalists para autocompletar Unidades Curriculares, Cursos e Docentes sem limitar a digitação livre */}
+      <datalist id="list-disciplinas">
+        {opcoesExistentes.disciplinas.map(d => <option key={d} value={d} />)}
+      </datalist>
+      <datalist id="list-cursos">
+        {opcoesExistentes.cursos.map(c => <option key={c} value={c} />)}
+      </datalist>
+      <datalist id="list-docentes">
+        {opcoesExistentes.docentes.map(doc => <option key={doc} value={doc} />)}
+      </datalist>
+
       <div className="glass-panel w-full max-w-5xl rounded-2xl border border-slate-700 shadow-2xl overflow-hidden my-auto">
         
         {/* Cabeçalho do Modal */}
@@ -291,16 +292,14 @@ export const UploadModal: React.FC<UploadModalProps> = ({
               <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs">
                 <div>
                   <label className="block text-slate-400 mb-1">Curso:</label>
-                  <select
+                  <input
+                    type="text"
+                    list="list-cursos"
+                    placeholder="Digitar ou selecionar..."
                     value={globalCurso}
                     onChange={(e) => setGlobalCurso(e.target.value)}
                     className="w-full px-2.5 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-200 text-xs"
-                  >
-                    <option value="">Selecione para todos...</option>
-                    {opcoesExistentes.cursos.map((c) => (
-                      <option key={c} value={c}>{c}</option>
-                    ))}
-                  </select>
+                  />
                 </div>
 
                 <div>
@@ -310,6 +309,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
                     onChange={(e) => setGlobalTipoCurso(e.target.value as TipoCurso)}
                     className="w-full px-2.5 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-200 text-xs"
                   >
+                    <option value="">Selecione...</option>
                     <option value="Presencial">Presencial</option>
                     <option value="Semi-presencial">Semi-presencial</option>
                   </select>
@@ -322,6 +322,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
                     onChange={(e) => setGlobalModelo(e.target.value as ModeloComponente)}
                     className="w-full px-2.5 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-200 text-xs"
                   >
+                    <option value="">Selecione...</option>
                     <option value="Básico">Básico</option>
                     <option value="Específico">Específico</option>
                   </select>
@@ -329,16 +330,14 @@ export const UploadModal: React.FC<UploadModalProps> = ({
 
                 <div>
                   <label className="block text-slate-400 mb-1">Docente / Tutor:</label>
-                  <select
+                  <input
+                    type="text"
+                    list="list-docentes"
+                    placeholder="Digitar ou selecionar..."
                     value={globalDocente}
                     onChange={(e) => setGlobalDocente(e.target.value)}
                     className="w-full px-2.5 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-200 text-xs"
-                  >
-                    <option value="">Selecione para todos...</option>
-                    {opcoesExistentes.docentes.map((d) => (
-                      <option key={d} value={d}>{d}</option>
-                    ))}
-                  </select>
+                  />
                 </div>
               </div>
             </div>
@@ -414,105 +413,71 @@ export const UploadModal: React.FC<UploadModalProps> = ({
                     {/* Linha 3: Unidade Curricular, Curso, Tipo, Modelo, Docente (Opcionais) */}
                     <div className="grid grid-cols-1 sm:grid-cols-5 gap-2.5 pt-1 text-xs">
                       
-                      {/* Unidade Curricular */}
+                      {/* Unidade Curricular (Input Texto com Autocomplete) */}
                       <div>
                         <label className="block text-[10px] text-slate-400 mb-1">Unidade Curricular:</label>
-                        <select
+                        <input
+                          type="text"
+                          list="list-disciplinas"
                           value={item.disciplina}
                           onChange={(e) => handleAtualizarItem(item.tempId, 'disciplina', e.target.value)}
-                          className="w-full px-2 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-200 text-xs"
-                        >
-                          <option value="">Selecione...</option>
-                          {opcoesExistentes.disciplinas.map((d) => (
-                            <option key={d} value={d}>{d}</option>
-                          ))}
-                          <option value="__novo__">+ Nova...</option>
-                        </select>
-                        {item.disciplina === '__novo__' && (
-                          <input
-                            type="text"
-                            placeholder="Nome da Unidade"
-                            value={item.disciplinaNova}
-                            onChange={(e) => handleAtualizarItem(item.tempId, 'disciplinaNova', e.target.value)}
-                            className="w-full mt-1 px-2 py-1 bg-slate-950 border border-brand-500/40 rounded-lg text-xs"
-                          />
-                        )}
+                          className="w-full px-2.5 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-200 text-xs focus:ring-1 focus:ring-brand-500"
+                          placeholder="Extraída do PDF..."
+                        />
                       </div>
 
-                      {/* Curso */}
+                      {/* Curso (Input Texto com Autocomplete) */}
                       <div>
                         <label className="block text-[10px] text-slate-400 mb-1">Curso:</label>
-                        <select
+                        <input
+                          type="text"
+                          list="list-cursos"
                           value={item.curso}
                           onChange={(e) => handleAtualizarItem(item.tempId, 'curso', e.target.value)}
-                          className="w-full px-2 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-200 text-xs"
-                        >
-                          <option value="">Selecione...</option>
-                          {opcoesExistentes.cursos.map((c) => (
-                            <option key={c} value={c}>{c}</option>
-                          ))}
-                          <option value="__novo__">+ Novo...</option>
-                        </select>
-                        {item.curso === '__novo__' && (
-                          <input
-                            type="text"
-                            placeholder="Nome do Curso"
-                            value={item.cursoNovo}
-                            onChange={(e) => handleAtualizarItem(item.tempId, 'cursoNovo', e.target.value)}
-                            className="w-full mt-1 px-2 py-1 bg-slate-950 border border-brand-500/40 rounded-lg text-xs"
-                          />
-                        )}
+                          className="w-full px-2.5 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-200 text-xs focus:ring-1 focus:ring-brand-500"
+                          placeholder="Selecione ou digite..."
+                        />
                       </div>
 
-                      {/* Tipo de Curso */}
+                      {/* Tipo de Curso (Sem pré-seleção) */}
                       <div>
                         <label className="block text-[10px] text-slate-400 mb-1">Tipo de Curso:</label>
                         <select
                           value={item.tipoCurso}
                           onChange={(e) => handleAtualizarItem(item.tempId, 'tipoCurso', e.target.value as TipoCurso)}
-                          className="w-full px-2 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-200 text-xs"
+                          className="w-full px-2.5 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-200 text-xs"
                         >
+                          <option value="">Selecione...</option>
                           <option value="Presencial">Presencial</option>
                           <option value="Semi-presencial">Semi-presencial</option>
                         </select>
                       </div>
 
-                      {/* Modelo Componente */}
+                      {/* Modelo Componente (Sem pré-seleção) */}
                       <div>
                         <label className="block text-[10px] text-slate-400 mb-1">Modelo Componente:</label>
                         <select
                           value={item.modeloComponente}
                           onChange={(e) => handleAtualizarItem(item.tempId, 'modeloComponente', e.target.value as ModeloComponente)}
-                          className="w-full px-2 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-200 text-xs"
+                          className="w-full px-2.5 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-200 text-xs"
                         >
+                          <option value="">Selecione...</option>
                           <option value="Básico">Básico</option>
                           <option value="Específico">Específico</option>
                         </select>
                       </div>
 
-                      {/* Docente / Tutor */}
+                      {/* Docente / Tutor (Input Texto com Autocomplete) */}
                       <div>
                         <label className="block text-[10px] text-slate-400 mb-1">Docente / Tutor:</label>
-                        <select
+                        <input
+                          type="text"
+                          list="list-docentes"
                           value={item.docente}
                           onChange={(e) => handleAtualizarItem(item.tempId, 'docente', e.target.value)}
-                          className="w-full px-2 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-200 text-xs"
-                        >
-                          <option value="">Selecione...</option>
-                          {opcoesExistentes.docentes.map((d) => (
-                            <option key={d} value={d}>{d}</option>
-                          ))}
-                          <option value="__novo__">+ Novo...</option>
-                        </select>
-                        {item.docente === '__novo__' && (
-                          <input
-                            type="text"
-                            placeholder="Nome Docente"
-                            value={item.docenteNovo}
-                            onChange={(e) => handleAtualizarItem(item.tempId, 'docenteNovo', e.target.value)}
-                            className="w-full mt-1 px-2 py-1 bg-slate-950 border border-brand-500/40 rounded-lg text-xs"
-                          />
-                        )}
+                          className="w-full px-2.5 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-slate-200 text-xs focus:ring-1 focus:ring-brand-500"
+                          placeholder="Selecione ou digite..."
+                        />
                       </div>
 
                     </div>
