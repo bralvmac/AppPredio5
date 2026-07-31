@@ -4,7 +4,6 @@ import { FiltrosBusca } from './components/FiltrosBusca';
 import { CardRoteiro } from './components/CardRoteiro';
 import { PdfModalViewer } from './components/PdfModalViewer';
 import { UploadModal } from './components/UploadModal';
-import { StatsBanner } from './components/StatsBanner';
 import { Roteiro, FiltrosState, OpcoesFiltros } from './types/roteiro';
 import { buscarRoteiros, deletarRoteiro, supabase, isSupabaseConfigured } from './lib/supabaseClient';
 import { SearchX, Loader2 } from 'lucide-react';
@@ -47,13 +46,13 @@ export const App: React.FC = () => {
 
     // Inscrição em Tempo Real (Supabase Realtime)
     if (isSupabaseConfigured && supabase) {
-      const channel = supabase
+      const client = supabase;
+      const channel = client
         .channel('mudancas-roteiros')
         .on(
           'postgres_changes',
           { event: '*', schema: 'public', table: 'roteiros' },
           async () => {
-            // Atualiza a lista em tempo real quando houver qualquer INSERT ou DELETE
             const atualizados = await buscarRoteiros();
             setRoteiros(atualizados);
           }
@@ -61,7 +60,7 @@ export const App: React.FC = () => {
         .subscribe();
 
       return () => {
-        supabase.removeChannel(channel);
+        client.removeChannel(channel);
       };
     }
   }, []);
@@ -151,30 +150,15 @@ export const App: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col bg-glow-radial">
       
-      {/* Navbar Superior */}
+      {/* Navbar Superior com Título, Status e Botão de Cadastrar */}
       <Navbar
         totalRoteiros={roteiros.length}
         onOpenUploadModal={() => setUploadModalAberto(true)}
       />
 
-      {/* Conteúdo Principal */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Conteúdo Principal: Apenas Área de Busca, Filtros e Lista de Roteiros */}
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
         
-        {/* Banner de Boas-Vindas */}
-        <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight flex items-center gap-2">
-              Buscador de Roteiros
-            </h2>
-            <p className="text-slate-400 text-sm mt-1">
-              Selecione os critérios ou busque por palavra-chave para abrir o roteiro da sua aula prática.
-            </p>
-          </div>
-        </div>
-
-        {/* Banner de Estatísticas */}
-        <StatsBanner roteiros={roteiros} />
-
         {/* Componente de Filtros de Pesquisa */}
         <FiltrosBusca
           filtros={filtros}
@@ -240,18 +224,6 @@ export const App: React.FC = () => {
         onRoteiroCadastrado={handleNovoRoteiroCadastrado}
         opcoesExistentes={opcoesFiltros}
       />
-
-      {/* Rodapé da Aplicação */}
-      <footer className="border-t border-slate-900 bg-slate-950 py-6 text-center text-xs text-slate-500">
-        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-          <p>© 2026 Portal de Roteiros de Aula Prática. Pronto para hospedagem no Vercel & Supabase.</p>
-          <div className="flex items-center gap-4">
-            <span className="text-slate-400">Presencial & Semi-presencial</span>
-            <span>•</span>
-            <span className="text-slate-400">Básico & Específico</span>
-          </div>
-        </div>
-      </footer>
 
     </div>
   );
