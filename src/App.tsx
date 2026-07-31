@@ -2,15 +2,19 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Navbar } from './components/Navbar';
 import { FiltrosBusca } from './components/FiltrosBusca';
 import { CardRoteiro } from './components/CardRoteiro';
+import { PastaRoteirosView } from './components/PastaRoteirosView';
 import { PdfModalViewer } from './components/PdfModalViewer';
 import { UploadModal } from './components/UploadModal';
 import { Roteiro, FiltrosState, OpcoesFiltros } from './types/roteiro';
 import { buscarRoteiros, deletarRoteiro, supabase, isSupabaseConfigured } from './lib/supabaseClient';
-import { SearchX, Loader2 } from 'lucide-react';
+import { SearchX, Loader2, FolderTree, LayoutGrid } from 'lucide-react';
 
 export const App: React.FC = () => {
   const [roteiros, setRoteiros] = useState<Roteiro[]>([]);
   const [carregando, setCarregando] = useState<boolean>(true);
+
+  // Modo de Visualização: 'pastas' (Estilo Gerenciador Windows/Pastas) ou 'grade' (Cards)
+  const [modoVisualizacao, setModoVisualizacao] = useState<'pastas' | 'grade'>('pastas');
 
   // Modais
   const [roteiroSelecionado, setRoteiroSelecionado] = useState<Roteiro | null>(null);
@@ -64,7 +68,7 @@ export const App: React.FC = () => {
     }
   }, []);
 
-  // Extrai listas únicas para popular os seletores dos filtros
+  // Extrai listas ÚNICAS (sem duplicados) para popular os seletores dos filtros
   const opcoesFiltros = useMemo<OpcoesFiltros>(() => {
     const cursosSet = new Set<string>();
     const docentesSet = new Set<string>();
@@ -72,10 +76,18 @@ export const App: React.FC = () => {
     const temasSet = new Set<string>();
 
     roteiros.forEach(r => {
-      if (r.curso) cursosSet.add(r.curso);
-      if (r.docente) docentesSet.add(r.docente);
-      if (r.disciplina) disciplinasSet.add(r.disciplina);
-      if (r.tema) temasSet.add(r.tema);
+      if (r.curso && r.curso.trim()) {
+        cursosSet.add(r.curso.trim());
+      }
+      if (r.docente && r.docente.trim()) {
+        docentesSet.add(r.docente.trim());
+      }
+      if (r.disciplina && r.disciplina.trim()) {
+        disciplinasSet.add(r.disciplina.trim());
+      }
+      if (r.tema && r.tema.trim()) {
+        temasSet.add(r.tema.trim());
+      }
     });
 
     return {
@@ -97,7 +109,7 @@ export const App: React.FC = () => {
       }
 
       // 2. Filtro de Curso
-      if (filtros.curso && r.curso !== filtros.curso) return false;
+      if (filtros.curso && r.curso.trim() !== filtros.curso.trim()) return false;
 
       // 3. Filtro de Tipo de Curso (Presencial / Semi-presencial)
       if (filtros.tipoCurso !== 'Todos' && r.tipoCurso !== filtros.tipoCurso) return false;
@@ -106,13 +118,13 @@ export const App: React.FC = () => {
       if (filtros.modeloComponente !== 'Todos' && r.modeloComponente !== filtros.modeloComponente) return false;
 
       // 5. Filtro de Docente / Tutor
-      if (filtros.docente && r.docente !== filtros.docente) return false;
+      if (filtros.docente && r.docente.trim() !== filtros.docente.trim()) return false;
 
       // 6. Filtro de Unidade Curricular (Disciplina)
-      if (filtros.disciplina && r.disciplina !== filtros.disciplina) return false;
+      if (filtros.disciplina && r.disciplina.trim() !== filtros.disciplina.trim()) return false;
 
       // 7. Filtro de Tema
-      if (filtros.tema && r.tema !== filtros.tema) return false;
+      if (filtros.tema && r.tema.trim() !== filtros.tema.trim()) return false;
 
       return true;
     });
@@ -148,7 +160,7 @@ export const App: React.FC = () => {
         onOpenUploadModal={() => setUploadModalAberto(true)}
       />
 
-      {/* Conteúdo Principal: Apenas Área de Busca, Filtros e Lista de Roteiros */}
+      {/* Conteúdo Principal */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
         
         {/* Componente de Filtros de Pesquisa */}
@@ -160,6 +172,43 @@ export const App: React.FC = () => {
           totalResultados={roteirosFiltrados.length}
         />
 
+        {/* Alternador de Modo de Visualização (Pastas x Grade) */}
+        {!carregando && roteirosFiltrados.length > 0 && (
+          <div className="flex items-center justify-between mb-5">
+            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+              Exibição dos Roteiros
+            </span>
+
+            <div className="flex rounded-xl bg-slate-900 p-1 border border-slate-800">
+              <button
+                type="button"
+                onClick={() => setModoVisualizacao('pastas')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                  modoVisualizacao === 'pastas'
+                    ? 'bg-brand-500 text-slate-950 font-bold shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <FolderTree className="w-3.5 h-3.5" />
+                <span>Visão em Pastas (Windows)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setModoVisualizacao('grade')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                  modoVisualizacao === 'grade'
+                    ? 'bg-cyan-500 text-slate-950 font-bold shadow-sm'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <LayoutGrid className="w-3.5 h-3.5" />
+                <span>Visão em Grade (Cards)</span>
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Estado de Carregando */}
         {carregando ? (
           <div className="flex flex-col items-center justify-center py-20 text-slate-400">
@@ -168,17 +217,26 @@ export const App: React.FC = () => {
           </div>
         ) : roteirosFiltrados.length > 0 ? (
           
-          /* Grid de Roteiros Encontrados */
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in">
-            {roteirosFiltrados.map((roteiro) => (
-              <CardRoteiro
-                key={roteiro.id}
-                roteiro={roteiro}
-                onOpenPdf={setRoteiroSelecionado}
-                onDeletar={handleDeletarRoteiro}
-              />
-            ))}
-          </div>
+          modoVisualizacao === 'pastas' ? (
+            /* Visualização por Pastas (Estilo Gerenciador de Arquivos) */
+            <PastaRoteirosView
+              roteiros={roteirosFiltrados}
+              onOpenPdf={setRoteiroSelecionado}
+              onDeletar={handleDeletarRoteiro}
+            />
+          ) : (
+            /* Grid de Roteiros Encontrados em Cards */
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in">
+              {roteirosFiltrados.map((roteiro) => (
+                <CardRoteiro
+                  key={roteiro.id}
+                  roteiro={roteiro}
+                  onOpenPdf={setRoteiroSelecionado}
+                  onDeletar={handleDeletarRoteiro}
+                />
+              ))}
+            </div>
+          )
 
         ) : (
 
