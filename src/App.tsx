@@ -8,6 +8,19 @@ import { Roteiro, FiltrosState, OpcoesFiltros } from './types/roteiro';
 import { buscarRoteiros, deletarRoteiro, supabase, isSupabaseConfigured } from './lib/supabaseClient';
 import { SearchX, Loader2, FolderTree, LayoutGrid } from 'lucide-react';
 
+/**
+ * Remove acentos, diacríticos e converte para minúsculas para busca 100% insensível a acentuação e maiúsculas/minúsculas.
+ * Ex: "Nutrição" -> "nutricao", "ÁGUA" -> "agua", "Aterosclerose" -> "aterosclerose"
+ */
+function normalizarTexto(str: string): string {
+  if (!str) return '';
+  return str
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+}
+
 export const App: React.FC = () => {
   const [roteiros, setRoteiros] = useState<Roteiro[]>([]);
   const [carregando, setCarregando] = useState<boolean>(true);
@@ -97,33 +110,53 @@ export const App: React.FC = () => {
     };
   }, [roteiros]);
 
-  // Algoritmo de filtragem rápida e ordenação alfabética natural (A-Z)
+  // Algoritmo de filtragem com Busca Insensível a Acentuação, Maiúsculas/Minúsculas e Caracteres Especiais
   const roteirosFiltrados = useMemo(() => {
     const filtrados = roteiros.filter(r => {
-      // 1. Busca Geral (Texto Livre)
+      
+      // 1. Busca Geral Insensível a Acentos e Maiúsculas
       if (filtros.buscaGeral.trim()) {
-        const termo = filtros.buscaGeral.toLowerCase();
-        const textoCompleto = `${r.titulo} ${r.tema} ${r.curso} ${r.disciplina} ${r.docente} ${r.descricao || ''}`.toLowerCase();
-        if (!textoCompleto.includes(termo)) return false;
+        const termoNorm = normalizarTexto(filtros.buscaGeral);
+        const conteudoNorm = normalizarTexto(
+          `${r.titulo} ${r.tema} ${r.curso} ${r.disciplina} ${r.docente} ${r.tipoCurso} ${r.modeloComponente} ${r.descricao || ''}`
+        );
+        
+        // Suporta busca por múltiplos termos espaçados (ex: "nutricao glicemia")
+        const termos = termoNorm.split(/\s+/).filter(Boolean);
+        const correspondeTodosTermos = termos.every(t => conteudoNorm.includes(t));
+        
+        if (!correspondeTodosTermos) return false;
       }
 
-      // 2. Filtro de Curso
-      if (filtros.curso && r.curso.trim() !== filtros.curso.trim()) return false;
+      // 2. Filtro de Curso (Insensível a Acentos/Caixa)
+      if (filtros.curso && normalizarTexto(r.curso) !== normalizarTexto(filtros.curso)) {
+        return false;
+      }
 
       // 3. Filtro de Tipo de Curso (Presencial / Semi-presencial)
-      if (filtros.tipoCurso !== 'Todos' && r.tipoCurso !== filtros.tipoCurso) return false;
+      if (filtros.tipoCurso !== 'Todos' && normalizarTexto(r.tipoCurso) !== normalizarTexto(filtros.tipoCurso)) {
+        return false;
+      }
 
       // 4. Filtro de Modelo de Componente (Básico / Específico)
-      if (filtros.modeloComponente !== 'Todos' && r.modeloComponente !== filtros.modeloComponente) return false;
+      if (filtros.modeloComponente !== 'Todos' && normalizarTexto(r.modeloComponente) !== normalizarTexto(filtros.modeloComponente)) {
+        return false;
+      }
 
       // 5. Filtro de Docente / Tutor
-      if (filtros.docente && r.docente.trim() !== filtros.docente.trim()) return false;
+      if (filtros.docente && normalizarTexto(r.docente) !== normalizarTexto(filtros.docente)) {
+        return false;
+      }
 
       // 6. Filtro de Unidade Curricular (Disciplina)
-      if (filtros.disciplina && r.disciplina.trim() !== filtros.disciplina.trim()) return false;
+      if (filtros.disciplina && normalizarTexto(r.disciplina) !== normalizarTexto(filtros.disciplina)) {
+        return false;
+      }
 
       // 7. Filtro de Tema
-      if (filtros.tema && r.tema.trim() !== filtros.tema.trim()) return false;
+      if (filtros.tema && normalizarTexto(r.tema) !== normalizarTexto(filtros.tema)) {
+        return false;
+      }
 
       return true;
     });
@@ -158,7 +191,7 @@ export const App: React.FC = () => {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col bg-glow-radial">
       
-      {/* Conteúdo Principal Ultra Limpo (Sem Barra Superior) */}
+      {/* Conteúdo Principal Ultra Limpo */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
         
         {/* Busca, Filtros e Botão Cadastrar Roteiro */}
