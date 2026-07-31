@@ -41,33 +41,41 @@ export async function extrairMetadadosDoPdf(file: File): Promise<ExtractedPdfMet
   };
 
   if (textContent) {
-    // Busca exata para "Unidade Curricular:"
+    // 2. Extração da Unidade Curricular (Disciplina)
     const matchUnidade = 
-      textContent.match(/Unidade\s+Curricular\s*:\s*([^\n\r;]+)/i) ||
-      textContent.match(/(?:disciplina|mat[ée]ria|componente curricular)\s*:\s*([^\n\r;]+)/i);
+      textContent.match(/Unidade\s+Curricular\s*:\s*([^\n\r]+)/i) ||
+      textContent.match(/(?:disciplina|mat[ée]ria|componente curricular)\s*:\s*([^\n\r]+)/i);
 
     if (matchUnidade?.[1]) {
-      resultado.unidadeCurricular = limparTexto(matchUnidade[1]);
+      resultado.unidadeCurricular = isolarValorCampo(matchUnidade[1]);
     }
 
-    // Busca exata para "Tema:"
+    // 3. Extração do Tema da Aula
     const matchTema = 
-      textContent.match(/Tema\s*:\s*([^\n\r;]+)/i) ||
-      textContent.match(/Tema\s+da\s+Aula\s*:\s*([^\n\r;]+)/i);
+      textContent.match(/Tema\s*:\s*([^\n\r]+)/i) ||
+      textContent.match(/Tema\s+da\s+Aula\s*:\s*([^\n\r]+)/i);
 
     if (matchTema?.[1]) {
-      resultado.tema = limparTexto(matchTema[1]);
+      resultado.tema = isolarValorCampo(matchTema[1]);
     }
   }
 
   return resultado;
 }
 
-function limparTexto(str: string): string {
-  return str
-    .replace(/[\n\r]+/g, ' ')
+/**
+ * Isola estritamente o valor do campo interrompendo assim que encontrar
+ * delimitadores conhecidos de seções seguintes como "Aula Prática:", "COMPETÊNCIAS", "Tema:", etc.
+ */
+function isolarValorCampo(textoBruto: string): string {
+  if (!textoBruto) return '';
+
+  // Interrompe o texto antes de seções como "Aula Prática", "COMPETÊNCIAS", "Tema:", "Unidade Curricular:", números de tópicos, etc.
+  const textoCortado = textoBruto.split(/\s+(?:Aula\s+Pr[áa]tica|COMPET[ÊE]NCIAS|Tema\s*:|Unidade\s+Curricular\s*:|OBJETIV|INTRODU|DESCRIT|MATERIA|EQUIPAM|PROCEDIM|1\.)/i)[0];
+
+  return textoCortado
+    .replace(/^[\s:–-]+/, '')
+    .replace(/[\s:–-]+$/, '')
     .replace(/\s+/g, ' ')
-    .replace(/^(?:aula pr[áa]tica|tema|unidade curricular)\s*:\s*/i, '')
-    .trim()
-    .substring(0, 150);
+    .trim();
 }
