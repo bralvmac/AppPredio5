@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Filter, X, RefreshCw, UserCheck, GraduationCap, BookOpen, Layers, Monitor, Building2, User } from 'lucide-react';
+import { Search, Filter, X, RefreshCw, GraduationCap, BookOpen, Layers, Monitor, Building2, User } from 'lucide-react';
 import { FiltrosState, OpcoesFiltros } from '../types/roteiro';
 
 interface FiltrosBuscaProps {
@@ -25,7 +25,6 @@ export const FiltrosBusca: React.FC<FiltrosBuscaProps> = ({
     filtros.tipoCurso !== 'Todos' ||
     filtros.modeloComponente !== 'Todos' ||
     filtros.docente !== '' ||
-    filtros.tutor !== '' ||
     filtros.disciplina !== '' ||
     filtros.tema !== '';
 
@@ -54,7 +53,7 @@ export const FiltrosBusca: React.FC<FiltrosBuscaProps> = ({
             type="text"
             value={filtros.buscaGeral}
             onChange={(e) => handleCampoChange('buscaGeral', e.target.value)}
-            placeholder="Buscar por palavra-chave, tema, disciplina, professor ou curso..."
+            placeholder="Buscar por palavra-chave, tema, unidade curricular, docente ou curso..."
             className="block w-full pl-11 pr-10 py-3 bg-slate-900/90 border border-slate-800 rounded-xl text-slate-100 placeholder-slate-500 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/50 focus:border-brand-500 transition-all shadow-inner"
           />
           {filtros.buscaGeral && (
@@ -102,8 +101,8 @@ export const FiltrosBusca: React.FC<FiltrosBuscaProps> = ({
 
       </div>
 
-      {/* Grid de Filtros Avançados (Visível ou Expandido) */}
-      <div className={`mt-5 pt-5 border-t border-slate-800/60 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 ${
+      {/* Grid de Filtros Avançados */}
+      <div className={`mt-5 pt-5 border-t border-slate-800/60 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 ${
         expandidoMobile ? 'block' : 'hidden md:grid'
       }`}>
 
@@ -125,65 +124,47 @@ export const FiltrosBusca: React.FC<FiltrosBuscaProps> = ({
           </select>
         </div>
 
-        {/* 2. Seleção de Disciplina / Matéria */}
+        {/* 2. Seleção de Unidade Curricular (Disciplina) */}
         <div>
           <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2 flex items-center gap-1.5">
             <BookOpen className="w-3.5 h-3.5 text-cyan-400" />
-            Disciplina / Matéria
+            Unidade Curricular (Disciplina)
           </label>
           <select
             value={filtros.disciplina}
             onChange={(e) => handleCampoChange('disciplina', e.target.value)}
             className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500/50"
           >
-            <option value="">Todas as Disciplinas</option>
+            <option value="">Todas as Unidades Curriculares</option>
             {opcoes.disciplinas.map((d) => (
               <option key={d} value={d}>{d}</option>
             ))}
           </select>
         </div>
 
-        {/* 3. Seleção de Docente */}
+        {/* 3. Seleção de Docente / Tutor (Unificados) */}
         <div>
           <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2 flex items-center gap-1.5">
             <User className="w-3.5 h-3.5 text-indigo-400" />
-            Docente
+            Docente / Tutor
           </label>
           <select
             value={filtros.docente}
             onChange={(e) => handleCampoChange('docente', e.target.value)}
             className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500/50"
           >
-            <option value="">Todos os Docentes</option>
+            <option value="">Todos os Docentes / Tutores</option>
             {opcoes.docentes.map((doc) => (
               <option key={doc} value={doc}>{doc}</option>
             ))}
           </select>
         </div>
 
-        {/* 4. Seleção de Tutor */}
-        <div>
-          <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-            <UserCheck className="w-3.5 h-3.5 text-purple-400" />
-            Tutor
-          </label>
-          <select
-            value={filtros.tutor}
-            onChange={(e) => handleCampoChange('tutor', e.target.value)}
-            className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500/50"
-          >
-            <option value="">Todos os Tutores</option>
-            {opcoes.tutores.map((t) => (
-              <option key={t} value={t}>{t}</option>
-            ))}
-          </select>
-        </div>
-
-        {/* 5. Tipo de Curso (Modalidade: Presencial / Semi-presencial) */}
+        {/* 4. Tipo de Curso (Modalidade: Presencial / Semi-presencial) */}
         <div>
           <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2 flex items-center gap-1.5">
             <Building2 className="w-3.5 h-3.5 text-amber-400" />
-            Tipo de Curso (Modalidade)
+            Tipo de Curso
           </label>
           <div className="flex rounded-xl bg-slate-900 p-1 border border-slate-800">
             {['Todos', 'Presencial', 'Semi-presencial'].map((tipo) => (
@@ -203,7 +184,7 @@ export const FiltrosBusca: React.FC<FiltrosBuscaProps> = ({
           </div>
         </div>
 
-        {/* 6. Modelo do Componente (Básico / Específico) */}
+        {/* 5. Modelo do Componente (Básico / Específico) */}
         <div>
           <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2 flex items-center gap-1.5">
             <Layers className="w-3.5 h-3.5 text-rose-400" />
@@ -227,8 +208,8 @@ export const FiltrosBusca: React.FC<FiltrosBuscaProps> = ({
           </div>
         </div>
 
-        {/* 7. Tema da Aula Prática */}
-        <div className="sm:col-span-2">
+        {/* 6. Tema da Aula Prática */}
+        <div>
           <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2 flex items-center gap-1.5">
             <Monitor className="w-3.5 h-3.5 text-teal-400" />
             Tema da Aula Prática
@@ -238,7 +219,7 @@ export const FiltrosBusca: React.FC<FiltrosBuscaProps> = ({
             onChange={(e) => handleCampoChange('tema', e.target.value)}
             className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-slate-200 focus:outline-none focus:ring-2 focus:ring-brand-500/50"
           >
-            <option value="">Todos os Temas de Aula Prática</option>
+            <option value="">Todos os Temas</option>
             {opcoes.temas.map((t) => (
               <option key={t} value={t}>{t}</option>
             ))}

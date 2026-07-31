@@ -23,7 +23,6 @@ export const App: React.FC = () => {
     tipoCurso: 'Todos',
     modeloComponente: 'Todos',
     docente: '',
-    tutor: '',
     disciplina: '',
     tema: ''
   });
@@ -69,14 +68,12 @@ export const App: React.FC = () => {
   const opcoesFiltros = useMemo<OpcoesFiltros>(() => {
     const cursosSet = new Set<string>();
     const docentesSet = new Set<string>();
-    const tutoresSet = new Set<string>();
     const disciplinasSet = new Set<string>();
     const temasSet = new Set<string>();
 
     roteiros.forEach(r => {
       if (r.curso) cursosSet.add(r.curso);
       if (r.docente) docentesSet.add(r.docente);
-      if (r.tutor) tutoresSet.add(r.tutor);
       if (r.disciplina) disciplinasSet.add(r.disciplina);
       if (r.tema) temasSet.add(r.tema);
     });
@@ -84,7 +81,6 @@ export const App: React.FC = () => {
     return {
       cursos: Array.from(cursosSet).sort(),
       docentes: Array.from(docentesSet).sort(),
-      tutores: Array.from(tutoresSet).sort(),
       disciplinas: Array.from(disciplinasSet).sort(),
       temas: Array.from(temasSet).sort(),
     };
@@ -96,7 +92,7 @@ export const App: React.FC = () => {
       // 1. Busca Geral (Texto Livre)
       if (filtros.buscaGeral.trim()) {
         const termo = filtros.buscaGeral.toLowerCase();
-        const textoCompleto = `${r.titulo} ${r.tema} ${r.curso} ${r.disciplina} ${r.docente} ${r.tutor} ${r.descricao || ''}`.toLowerCase();
+        const textoCompleto = `${r.titulo} ${r.tema} ${r.curso} ${r.disciplina} ${r.docente} ${r.descricao || ''}`.toLowerCase();
         if (!textoCompleto.includes(termo)) return false;
       }
 
@@ -109,16 +105,13 @@ export const App: React.FC = () => {
       // 4. Filtro de Modelo de Componente (Básico / Específico)
       if (filtros.modeloComponente !== 'Todos' && r.modeloComponente !== filtros.modeloComponente) return false;
 
-      // 5. Filtro de Docente
+      // 5. Filtro de Docente / Tutor
       if (filtros.docente && r.docente !== filtros.docente) return false;
 
-      // 6. Filtro de Tutor
-      if (filtros.tutor && r.tutor !== filtros.tutor) return false;
-
-      // 7. Filtro de Disciplina
+      // 6. Filtro de Unidade Curricular (Disciplina)
       if (filtros.disciplina && r.disciplina !== filtros.disciplina) return false;
 
-      // 8. Filtro de Tema
+      // 7. Filtro de Tema
       if (filtros.tema && r.tema !== filtros.tema) return false;
 
       return true;
@@ -132,7 +125,6 @@ export const App: React.FC = () => {
       tipoCurso: 'Todos',
       modeloComponente: 'Todos',
       docente: '',
-      tutor: '',
       disciplina: '',
       tema: ''
     });

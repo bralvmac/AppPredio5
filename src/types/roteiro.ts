@@ -8,14 +8,12 @@ export interface Roteiro {
   curso: string;
   tipoCurso: TipoCurso;
   modeloComponente: ModeloComponente;
-  disciplina: string;
-  docente: string;
-  tutor: string;
+  disciplina: string; // Unidade Curricular
+  docente: string; // Docente / Tutor
+  tutor?: string;
   descricao?: string;
   pdfUrl: string;
   arquivoPath?: string;
-  duracaoMinutos?: number;
-  laboratorioTipo?: string;
   dataCriacao: string;
 }
 
@@ -24,16 +22,14 @@ export interface FiltrosState {
   curso: string;
   tipoCurso: string; // 'Todos' | 'Presencial' | 'Semi-presencial'
   modeloComponente: string; // 'Todos' | 'Básico' | 'Específico'
-  docente: string;
-  tutor: string;
-  disciplina: string;
+  docente: string; // Docente / Tutor
+  disciplina: string; // Unidade Curricular / Matéria
   tema: string;
 }
 
 export interface OpcoesFiltros {
   cursos: string[];
-  docentes: string[];
-  tutores: string[];
-  disciplinas: string[];
+  docentes: string[]; // Docentes / Tutores
+  disciplinas: string[]; // Unidades Curriculares
   temas: string[];
 }

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Eye, Download, FileText, GraduationCap, User, UserCheck, Clock, Building2, Share2, Check, Trash2, AlertTriangle } from 'lucide-react';
+import { Eye, Download, FileText, GraduationCap, User, Building2, Share2, Check, Trash2, AlertTriangle } from 'lucide-react';
 import { Roteiro } from '../types/roteiro';
 
 interface CardRoteiroProps {
@@ -80,7 +80,7 @@ export const CardRoteiro: React.FC<CardRoteiroProps> = ({ roteiro, onOpenPdf, on
           </button>
         </div>
 
-        {/* Título do Roteiro */}
+        {/* Título do Roteiro (Nome do Arquivo) */}
         <h3 className="text-lg font-bold text-white group-hover:text-emerald-400 transition-colors line-clamp-2 mb-2 leading-snug">
           {roteiro.titulo}
         </h3>
@@ -91,42 +91,24 @@ export const CardRoteiro: React.FC<CardRoteiroProps> = ({ roteiro, onOpenPdf, on
           {roteiro.tema}
         </p>
 
-        {/* Detalhes de Disciplina, Docente e Tutor */}
+        {/* Detalhes de Unidade Curricular e Docente/Tutor */}
         <div className="space-y-2 py-3 border-t border-b border-slate-800/60 text-xs mb-4">
           
           <div className="flex items-center justify-between text-slate-300">
             <span className="text-slate-400 flex items-center gap-1.5">
               <FileText className="w-3.5 h-3.5 text-slate-500" />
-              Disciplina:
+              Unidade Curricular:
             </span>
-            <span className="font-semibold text-slate-200 truncate max-w-[60%]">{roteiro.disciplina}</span>
+            <span className="font-semibold text-slate-200 truncate max-w-[55%]">{roteiro.disciplina}</span>
           </div>
 
           <div className="flex items-center justify-between text-slate-300">
             <span className="text-slate-400 flex items-center gap-1.5">
               <User className="w-3.5 h-3.5 text-slate-500" />
-              Docente:
+              Docente / Tutor:
             </span>
-            <span className="font-medium text-slate-200 truncate max-w-[60%]">{roteiro.docente}</span>
+            <span className="font-medium text-slate-200 truncate max-w-[55%]">{roteiro.docente}</span>
           </div>
-
-          <div className="flex items-center justify-between text-slate-300">
-            <span className="text-slate-400 flex items-center gap-1.5">
-              <UserCheck className="w-3.5 h-3.5 text-slate-500" />
-              Tutor:
-            </span>
-            <span className="font-medium text-slate-200 truncate max-w-[60%]">{roteiro.tutor}</span>
-          </div>
-
-          {roteiro.duracaoMinutos && (
-            <div className="flex items-center justify-between text-slate-300">
-              <span className="text-slate-400 flex items-center gap-1.5">
-                <Clock className="w-3.5 h-3.5 text-slate-500" />
-                Duração Estimada:
-              </span>
-              <span className="font-medium text-emerald-400">{roteiro.duracaoMinutos} min</span>
-            </div>
-          )}
 
         </div>
       </div>

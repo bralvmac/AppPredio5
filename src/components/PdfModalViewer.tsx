@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { X, Download, ExternalLink, GraduationCap, User, UserCheck, BookOpen, Clock, FileText } from 'lucide-react';
+import { X, Download, ExternalLink } from 'lucide-react';
 import { Roteiro } from '../types/roteiro';
 
 interface PdfModalViewerProps {
@@ -45,7 +45,7 @@ export const PdfModalViewer: React.FC<PdfModalViewerProps> = ({ roteiro, onClose
               {roteiro.titulo}
             </h2>
             <p className="text-xs text-slate-400 truncate">
-              <span className="text-slate-300">Tema: </span>{roteiro.tema} | <span className="text-slate-300">Matéria: </span>{roteiro.disciplina}
+              <span className="text-slate-300">Tema: </span>{roteiro.tema} | <span className="text-slate-300">Unidade Curricular: </span>{roteiro.disciplina}
             </p>
           </div>
 
@@ -86,11 +86,9 @@ export const PdfModalViewer: React.FC<PdfModalViewerProps> = ({ roteiro, onClose
         </div>
 
         {/* Informações Rápidas de Apoio */}
-        <div className="px-5 py-2.5 bg-slate-950/80 border-b border-slate-800/80 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs text-slate-300">
-          <div><strong className="text-slate-400">Docente:</strong> {roteiro.docente}</div>
-          <div><strong className="text-slate-400">Tutor:</strong> {roteiro.tutor}</div>
-          <div><strong className="text-slate-400">Laboratório:</strong> {roteiro.laboratorioTipo || 'Geral'}</div>
-          <div><strong className="text-slate-400">Duração:</strong> {roteiro.duracaoMinutos || 120} min</div>
+        <div className="px-5 py-2 bg-slate-950/80 border-b border-slate-800/80 flex items-center justify-between text-xs text-slate-300">
+          <div><strong className="text-slate-400">Docente / Tutor:</strong> {roteiro.docente}</div>
+          <div><strong className="text-slate-400">Unidade Curricular:</strong> {roteiro.disciplina}</div>
         </div>
 
         {/* Leitor de PDF Embutido */}

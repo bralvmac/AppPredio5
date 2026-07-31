@@ -29,7 +29,6 @@ export async function buscarRoteiros(): Promise<Roteiro[]> {
 
       if (error) throw error;
 
-      // Se a consulta ao Supabase for bem-sucedida, retorna exatamente os dados do banco (mesmo se estiver vazio [])
       if (data !== null) {
         return data.map((item: any) => ({
           id: item.id,
@@ -40,12 +39,10 @@ export async function buscarRoteiros(): Promise<Roteiro[]> {
           modeloComponente: item.modelo_componente,
           disciplina: item.disciplina,
           docente: item.docente,
-          tutor: item.tutor,
+          tutor: item.tutor || item.docente,
           descricao: item.descricao,
           pdfUrl: item.pdf_url,
           arquivoPath: item.arquivo_path,
-          duracaoMinutos: item.duracao_minutos,
-          laboratorioTipo: item.laboratorio_tipo,
           dataCriacao: item.created_at ? new Date(item.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
         }));
       }
@@ -128,12 +125,10 @@ export async function cadastrarRoteiro(
             modelo_componente: novo.modeloComponente,
             disciplina: novo.disciplina,
             docente: novo.docente,
-            tutor: novo.tutor,
+            tutor: novo.docente,
             descricao: novo.descricao || '',
             pdf_url: finalPdfUrl,
-            arquivo_path: finalFilePath,
-            duracao_minutos: novo.duracaoMinutos || 120,
-            laboratorio_tipo: novo.laboratorioTipo || 'Laboratório Geral'
+            arquivo_path: finalFilePath
           }
         ])
         .select()
@@ -155,8 +150,6 @@ export async function cadastrarRoteiro(
           descricao: data.descricao,
           pdfUrl: data.pdf_url,
           arquivoPath: data.arquivo_path,
-          duracaoMinutos: data.duracao_minutos,
-          laboratorioTipo: data.laboratorio_tipo,
           dataCriacao: data.created_at ? new Date(data.created_at).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
         };
       }
@@ -165,7 +158,7 @@ export async function cadastrarRoteiro(
     }
   }
 
-  // 3. Fallback Local Storage se não houver Supabase
+  // 3. Fallback Local Storage
   const locaisStr = localStorage.getItem(STORAGE_KEY);
   const locais = locaisStr ? JSON.parse(locaisStr) : [];
   locais.unshift(roteiroCriado);
@@ -178,7 +171,6 @@ export async function cadastrarRoteiro(
 export async function deletarRoteiro(id: string, arquivoPath?: string): Promise<boolean> {
   if (isSupabaseConfigured && supabase) {
     try {
-      // Deleta do Banco de Dados
       const { error: dbError } = await supabase
         .from('roteiros')
         .delete()
@@ -188,7 +180,6 @@ export async function deletarRoteiro(id: string, arquivoPath?: string): Promise<
         console.error("Erro ao excluir roteiro do banco Supabase:", dbError);
       }
 
-      // Deleta o PDF do Storage se houver caminho do arquivo
       if (arquivoPath) {
         await supabase.storage.from('roteiros-pdf').remove([arquivoPath]);
       }
@@ -197,7 +188,6 @@ export async function deletarRoteiro(id: string, arquivoPath?: string): Promise<
     }
   }
 
-  // Sempre remove também do LocalStorage para manter a sincronia
   const locaisStr = localStorage.getItem(STORAGE_KEY);
   if (locaisStr) {
     try {

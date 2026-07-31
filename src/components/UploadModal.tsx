@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, UploadCloud, AlertCircle, CheckCircle2, Loader2, Sparkles, FileText } from 'lucide-react';
+import { X, UploadCloud, AlertCircle, CheckCircle2, Loader2, Sparkles } from 'lucide-react';
 import { Roteiro, TipoCurso, ModeloComponente } from '../types/roteiro';
 import { cadastrarRoteiro, isSupabaseConfigured } from '../lib/supabaseClient';
 import { extrairMetadadosDoPdf } from '../lib/pdfExtractor';
@@ -11,7 +11,6 @@ interface UploadModalProps {
   opcoesExistentes: {
     cursos: string[];
     docentes: string[];
-    tutores: string[];
     disciplinas: string[];
   };
 }
@@ -32,11 +31,6 @@ export const UploadModal: React.FC<UploadModalProps> = ({
   const [disciplinaNova, setDisciplinaNova] = useState('');
   const [docente, setDocente] = useState('');
   const [docenteNovo, setDocenteNovo] = useState('');
-  const [tutor, setTutor] = useState('');
-  const [tutorNovo, setTutorNovo] = useState('');
-  const [descricao, setDescricao] = useState('');
-  const [duracaoMinutos, setDuracaoMinutos] = useState<number>(120);
-  const [laboratorioTipo, setLaboratorioTipo] = useState('');
   
   const [arquivoPdf, setArquivoPdf] = useState<File | null>(null);
   const [urlPdfManual, setUrlPdfManual] = useState('');
@@ -55,54 +49,28 @@ export const UploadModal: React.FC<UploadModalProps> = ({
 
     if (!file) return;
 
+    // 1. Define o título como o nome do arquivo sem extensão
+    const nomeSemExtensao = file.name.replace(/\.pdf$/i, '').replace(/_/g, ' ').trim();
+    setTitulo(nomeSemExtensao);
+
     try {
       setAnalisandoPdf(true);
       const meta = await extrairMetadadosDoPdf(file);
 
-      if (meta.titulo && !titulo) setTitulo(meta.titulo);
-      if (meta.tema && !tema) setTema(meta.tema);
-      if (meta.tipoCurso) setTipoCurso(meta.tipoCurso);
-      if (meta.modeloComponente) setModeloComponente(meta.modeloComponente);
-      if (meta.duracaoMinutos) setDuracaoMinutos(meta.duracaoMinutos);
-      if (meta.laboratorioTipo && !laboratorioTipo) setLaboratorioTipo(meta.laboratorioTipo);
-
-      // Preenchimento inteligente do Curso
-      if (meta.curso) {
-        if (opcoesExistentes.cursos.includes(meta.curso)) {
-          setCurso(meta.curso);
-        } else {
-          setCurso('__novo__');
-          setCursoNovo(meta.curso);
-        }
+      // 2. Preenche o Tema se encontrado no PDF
+      if (meta.tema) {
+        setTema(meta.tema);
+      } else {
+        setTema(nomeSemExtensao);
       }
 
-      // Preenchimento inteligente da Disciplina
-      if (meta.disciplina) {
-        if (opcoesExistentes.disciplinas.includes(meta.disciplina)) {
-          setDisciplina(meta.disciplina);
+      // 3. Preenche a Unidade Curricular (Disciplina / Matéria) se encontrada
+      if (meta.unidadeCurricular) {
+        if (opcoesExistentes.disciplinas.includes(meta.unidadeCurricular)) {
+          setDisciplina(meta.unidadeCurricular);
         } else {
           setDisciplina('__novo__');
-          setDisciplinaNova(meta.disciplina);
-        }
-      }
-
-      // Preenchimento inteligente do Docente
-      if (meta.docente) {
-        if (opcoesExistentes.docentes.includes(meta.docente)) {
-          setDocente(meta.docente);
-        } else {
-          setDocente('__novo__');
-          setDocenteNovo(meta.docente);
-        }
-      }
-
-      // Preenchimento inteligente do Tutor
-      if (meta.tutor) {
-        if (opcoesExistentes.tutores.includes(meta.tutor)) {
-          setTutor(meta.tutor);
-        } else {
-          setTutor('__novo__');
-          setTutorNovo(meta.tutor);
+          setDisciplinaNova(meta.unidadeCurricular);
         }
       }
 
@@ -121,10 +89,9 @@ export const UploadModal: React.FC<UploadModalProps> = ({
     const cursoFinal = curso === '__novo__' ? cursoNovo : curso;
     const disciplinaFinal = disciplina === '__novo__' ? disciplinaNova : disciplina;
     const docenteFinal = docente === '__novo__' ? docenteNovo : docente;
-    const tutorFinal = tutor === '__novo__' ? tutorNovo : tutor;
 
-    if (!titulo || !tema || !cursoFinal || !disciplinaFinal || !docenteFinal || !tutorFinal) {
-      setErro('Por favor, preencha todos os campos obrigatórios (Título, Tema, Curso, Disciplina, Docente e Tutor).');
+    if (!titulo || !tema || !cursoFinal || !disciplinaFinal || !docenteFinal) {
+      setErro('Por favor, preencha todos os campos obrigatórios (Título, Tema, Curso, Unidade Curricular e Docente/Tutor).');
       return;
     }
 
@@ -145,11 +112,8 @@ export const UploadModal: React.FC<UploadModalProps> = ({
           modeloComponente,
           disciplina: disciplinaFinal,
           docente: docenteFinal,
-          tutor: tutorFinal,
-          descricao,
-          pdfUrl: urlPdfManual || 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
-          duracaoMinutos,
-          laboratorioTipo: laboratorioTipo || 'Laboratório Multidisciplinar'
+          tutor: docenteFinal, // Armazena no campo tutor também para compatibilidade
+          pdfUrl: urlPdfManual || 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf'
         },
         arquivoPdf || undefined
       );
@@ -175,11 +139,6 @@ export const UploadModal: React.FC<UploadModalProps> = ({
     setDisciplinaNova('');
     setDocente('');
     setDocenteNovo('');
-    setTutor('');
-    setTutorNovo('');
-    setDescricao('');
-    setDuracaoMinutos(120);
-    setLaboratorioTipo('');
     setArquivoPdf(null);
     setUrlPdfManual('');
     setMetadadosExtraidos(false);
@@ -189,7 +148,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/90 backdrop-blur-md animate-fade-in overflow-y-auto">
       
-      <div className="glass-panel w-full max-w-3xl rounded-2xl border border-slate-700 shadow-2xl overflow-hidden my-auto">
+      <div className="glass-panel w-full max-w-2xl rounded-2xl border border-slate-700 shadow-2xl overflow-hidden my-auto">
         
         {/* Cabeçalho do Form */}
         <div className="px-6 py-5 bg-slate-900 border-b border-slate-800 flex items-center justify-between">
@@ -199,7 +158,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
             </div>
             <div>
               <h2 className="text-lg font-bold text-white">Cadastrar Novo Roteiro de Aula Prática</h2>
-              <p className="text-xs text-slate-400">Faça o upload do PDF e deixe a IA extrair as informações automaticamente</p>
+              <p className="text-xs text-slate-400">Anexe o PDF e o sistema extrairá a Unidade Curricular e o Tema automaticamente</p>
             </div>
           </div>
           <button
@@ -212,13 +171,11 @@ export const UploadModal: React.FC<UploadModalProps> = ({
 
         {/* Notificação de Leitura Automática de PDF */}
         {metadadosExtraidos && (
-          <div className="px-6 py-3 bg-brand-500/15 border-b border-brand-500/30 text-brand-300 text-xs flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-brand-400 shrink-0" />
-              <span>
-                <strong>Leitura Automática:</strong> As informações foram identificadas no PDF e preenchidas abaixo! Você pode revisar ou alterar qualquer campo.
-              </span>
-            </div>
+          <div className="px-6 py-2.5 bg-brand-500/15 border-b border-brand-500/30 text-brand-300 text-xs flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-brand-400 shrink-0" />
+            <span>
+              <strong>Unidade Curricular e Tema extraídos do PDF!</strong> O título foi preenchido com o nome do arquivo.
+            </span>
           </div>
         )}
 
@@ -230,7 +187,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
         )}
 
         {/* Formulário */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-5 max-h-[75vh] overflow-y-auto">
+        <form onSubmit={handleSubmit} className="p-6 space-y-5 max-h-[78vh] overflow-y-auto">
           
           {/* Seção 1: Upload do Arquivo PDF */}
           <div className="p-4 rounded-xl bg-slate-900/90 border border-slate-800">
@@ -247,7 +204,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
                 {analisandoPdf ? (
                   <div className="flex flex-col items-center py-2">
                     <Loader2 className="w-8 h-8 text-brand-400 animate-spin mb-2" />
-                    <span className="text-xs font-semibold text-brand-300">Lendo PDF e identificando informações...</span>
+                    <span className="text-xs font-semibold text-brand-300">Lendo PDF e extraindo dados...</span>
                   </div>
                 ) : (
                   <>
@@ -256,7 +213,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
                       {arquivoPdf ? arquivoPdf.name : 'Clique para selecionar o PDF do Roteiro'}
                     </span>
                     <span className="text-[11px] text-slate-500 mt-1">
-                      {arquivoPdf ? `${(arquivoPdf.size / (1024 * 1024)).toFixed(2)} MB` : 'O sistema lerá os dados do PDF automaticamente'}
+                      {arquivoPdf ? `${(arquivoPdf.size / (1024 * 1024)).toFixed(2)} MB` : 'Extrai Unidade Curricular, Tema e nome do arquivo'}
                     </span>
                   </>
                 )}
@@ -287,10 +244,10 @@ export const UploadModal: React.FC<UploadModalProps> = ({
           {/* Seção 2: Identificação do Roteiro & Tema */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="sm:col-span-2">
-              <label className="block text-xs font-semibold text-slate-300 mb-1">Título do Roteiro *</label>
+              <label className="block text-xs font-semibold text-slate-300 mb-1">Título do Roteiro (Nome do Arquivo) *</label>
               <input
                 type="text"
-                placeholder="Ex: Dissecção e Identificação das Estruturas do Sistema Cardiorrespiratório"
+                placeholder="Nome do arquivo anexado"
                 value={titulo}
                 onChange={(e) => setTitulo(e.target.value)}
                 className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-500/50"
@@ -302,7 +259,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({
               <label className="block text-xs font-semibold text-slate-300 mb-1">Tema da Aula Prática *</label>
               <input
                 type="text"
-                placeholder="Ex: Anatomia do Coração e Pulmões"
+                placeholder="Ex: Processo de Desenvolvimento da Aterosclerose"
                 value={tema}
                 onChange={(e) => setTema(e.target.value)}
                 className="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-xs text-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-500/50"
@@ -373,28 +330,28 @@ export const UploadModal: React.FC<UploadModalProps> = ({
             </div>
           </div>
 
-          {/* Seção 4: Disciplina, Docente e Tutor */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {/* Seção 4: Unidade Curricular & Docente / Tutor (Unificados) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             
-            {/* Disciplina */}
+            {/* Unidade Curricular (Disciplina / Matéria) */}
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">Disciplina / Matéria *</label>
+              <label className="block text-xs font-semibold text-slate-300 mb-1">Unidade Curricular (Disciplina) *</label>
               <select
                 value={disciplina}
                 onChange={(e) => setDisciplina(e.target.value)}
                 className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-xs text-slate-200"
                 required
               >
-                <option value="">Selecione a Disciplina</option>
+                <option value="">Selecione a Unidade Curricular</option>
                 {opcoesExistentes.disciplinas.map((d) => (
                   <option key={d} value={d}>{d}</option>
                 ))}
-                <option value="__novo__">+ Adicionar Nova Disciplina...</option>
+                <option value="__novo__">+ Adicionar Nova Unidade Curricular...</option>
               </select>
               {disciplina === '__novo__' && (
                 <input
                   type="text"
-                  placeholder="Nome da Disciplina"
+                  placeholder="Nome da Unidade Curricular"
                   value={disciplinaNova}
                   onChange={(e) => setDisciplinaNova(e.target.value)}
                   className="w-full mt-2 px-3 py-2 bg-slate-950 border border-brand-500/40 rounded-xl text-xs text-slate-100"
@@ -403,25 +360,25 @@ export const UploadModal: React.FC<UploadModalProps> = ({
               )}
             </div>
 
-            {/* Docente */}
+            {/* Docente / Tutor (Unificado) */}
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">Docente Responsável *</label>
+              <label className="block text-xs font-semibold text-slate-300 mb-1">Docente / Tutor *</label>
               <select
                 value={docente}
                 onChange={(e) => setDocente(e.target.value)}
                 className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-xs text-slate-200"
                 required
               >
-                <option value="">Selecione o Docente</option>
+                <option value="">Selecione o Docente / Tutor</option>
                 {opcoesExistentes.docentes.map((doc) => (
                   <option key={doc} value={doc}>{doc}</option>
                 ))}
-                <option value="__novo__">+ Adicionar Novo Docente...</option>
+                <option value="__novo__">+ Adicionar Novo Docente / Tutor...</option>
               </select>
               {docente === '__novo__' && (
                 <input
                   type="text"
-                  placeholder="Nome do Prof. Docente"
+                  placeholder="Nome do Docente / Tutor"
                   value={docenteNovo}
                   onChange={(e) => setDocenteNovo(e.target.value)}
                   className="w-full mt-2 px-3 py-2 bg-slate-950 border border-brand-500/40 rounded-xl text-xs text-slate-100"
@@ -430,68 +387,6 @@ export const UploadModal: React.FC<UploadModalProps> = ({
               )}
             </div>
 
-            {/* Tutor */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">Tutor *</label>
-              <select
-                value={tutor}
-                onChange={(e) => setTutor(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-xs text-slate-200"
-                required
-              >
-                <option value="">Selecione o Tutor</option>
-                {opcoesExistentes.tutores.map((t) => (
-                  <option key={t} value={t}>{t}</option>
-                ))}
-                <option value="__novo__">+ Adicionar Novo Tutor...</option>
-              </select>
-              {tutor === '__novo__' && (
-                <input
-                  type="text"
-                  placeholder="Nome do Tutor"
-                  value={tutorNovo}
-                  onChange={(e) => setTutorNovo(e.target.value)}
-                  className="w-full mt-2 px-3 py-2 bg-slate-950 border border-brand-500/40 rounded-xl text-xs text-slate-100"
-                  required
-                />
-              )}
-            </div>
-
-          </div>
-
-          {/* Seção 5: Detalhes Opcionais (Duração, Tipo Lab, Descrição) */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">Duração Estimada (Minutos)</label>
-              <input
-                type="number"
-                value={duracaoMinutos}
-                onChange={(e) => setDuracaoMinutos(Number(e.target.value))}
-                className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-xs text-slate-200"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">Tipo de Laboratório Exigido</label>
-              <input
-                type="text"
-                placeholder="Ex: Laboratório de Anatomia, Microbiologia, etc."
-                value={laboratorioTipo}
-                onChange={(e) => setLaboratorioTipo(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-xs text-slate-200"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1">Observações ou Resumo do Roteiro (Opcional)</label>
-            <textarea
-              rows={2}
-              placeholder="Descreva brevemente os objetivos da prática..."
-              value={descricao}
-              onChange={(e) => setDescricao(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-xs text-slate-200"
-            />
           </div>
 
           {/* Rodapé do Form */}
