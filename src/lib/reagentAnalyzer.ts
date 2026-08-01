@@ -103,39 +103,32 @@ async function extrairTextoDeUrlPdf(url: string): Promise<string> {
 }
 
 /**
- * Algoritmo determinístico por blocos "Nº 1", "Nº 2", etc.
- * Interrompe no final da tabela e não captura seções posteriores (CONSIDERAÇÕES GERAIS, Capela, POPs).
+ * Algoritmo cirúrgico: captura o item do prefixo "Nº X" até a sua quantidade (ex: "100 ml").
+ * Qualquer texto após a quantidade é 100% DESCARTADO.
  */
 function extrairReagentesDasSecoesBancada(texto: string): ReagenteItem[] {
   const reagentesEncontrados: ReagenteItem[] = [];
 
-  // Normaliza o texto para busca uniforme de numerações
+  // Normaliza a numeração de itens no texto
   const textoNormalizado = texto.replace(/N[º°]\s*(\d+)/gi, 'Nº $1');
 
-  // 1. ISOLAMENTO POR BLOCOS NUMERADOS: Interrompe exatamente no início do próximo Nº ou seções finais da página
-  const regexBlocoNumerado = /(Nº\s*\d+\s*[–-][\s\S]*?)(?=(?:Nº\s*\d+|•|CONSIDERA[ÇC][ÕO]ES|Acesso\s+aos|Banho\s+Maria|Capela|DISPONIBILIZA[ÇC][ÃA]O|PROP[ÓO]SITO|PROCEDIMENTO|$))/gi;
+  // REGEX CIRÚRGICA:
+  // Grupo 1: "Nº X – Nome do Reagente e Concentração"
+  // Grupo 2: Quantidade (ex: "100 ml", "50 mL", "25 ml", "10 gotas", "5 g")
+  const regexItemNumerado = /(Nº\s*\d+\s*[–-][^Nº\n\r]*?)\s+(\d+(?:[.,]\d+)?\s*(?:mL|ml|L|g|mg|gotas|tubos|frascos|litro|litros|unidades|unidade|caixa|pacote|frasco|frascos))\b/gi;
 
-  let matchBloco: RegExpExecArray | null;
+  let match: RegExpExecArray | null;
 
-  while ((matchBloco = regexBlocoNumerado.exec(textoNormalizado)) !== null) {
-    let blocoTexto = matchBloco[1].trim();
+  while ((match = regexItemNumerado.exec(textoNormalizado)) !== null) {
+    const textoAntesQtd = match[1].trim(); // ex: "Nº 12 – Amido 1%"
+    const quantidade = match[2].trim();    // ex: "100 ml"
 
-    // Corta qualquer resíduo de seções posteriores como "CONSIDERAÇÕES GERAIS", "Banho Maria", "Capela", "POPs"
-    blocoTexto = blocoTexto.split(/\s+(?:•|CONSIDERA[ÇC][ÕO]ES\s+GERAIS|Acesso\s+aos\s+POPs|Banho\s+Maria|Capela|Bancada\s+Lateral)/i)[0].trim();
-
-    // Procura a quantidade no formato (ex: "10 ml", "30 ml", "50 mL", "5 g")
-    const matchQtd = blocoTexto.match(/(\d+(?:[.,]\d+)?\s*(?:mL|ml|L|g|mg|gotas|tubos|frascos))\b/i);
-    const quantidade = matchQtd ? matchQtd[1].trim() : 'Conforme bancada';
-
-    // Procura a concentração estrita (palavra inteira M, N, %, mol/L - evitando confundir 'ml' com 'M')
-    const matchConc = blocoTexto.match(/(\d+(?:[.,]\d+)?\s*(?:M\b|mol\/L|N\b|%))/i);
+    // Procura a concentração estrita (ex: "1%", "0,1 M", "1 M", "70%", "0,1 N")
+    const matchConc = textoAntesQtd.match(/(\d+(?:[.,]\d+)?\s*(?:M\b|mol\/L|N\b|%))/i);
     const concentracao = matchConc ? matchConc[1].trim() : undefined;
 
-    // Extrai o nome do reagente limpando a quantidade e concentração
-    let nomeLimpo = blocoTexto;
-    if (matchQtd) {
-      nomeLimpo = nomeLimpo.replace(matchQtd[0], '');
-    }
+    // Remove a concentração e limpa o nome do reagente
+    let nomeLimpo = textoAntesQtd;
     if (concentracao) {
       nomeLimpo = nomeLimpo.replace(concentracao, '');
     }
@@ -146,7 +139,7 @@ function extrairReagentesDasSecoesBancada(texto: string): ReagenteItem[] {
       .trim();
 
     // Identifica se pertence à Bancada do Aluno ou Bancada de Apoio
-    const indIndex = matchBloco.index;
+    const indIndex = match.index;
     const trechoAnterior = textoNormalizado.substring(Math.max(0, indIndex - 400), indIndex);
     const origemBancada: ReagenteItem['origemBancada'] = /APOIO/i.test(trechoAnterior) ? 'Bancada de Apoio' : 'Bancada do Aluno';
 
@@ -166,12 +159,12 @@ function extrairReagentesDasSecoesBancada(texto: string): ReagenteItem[] {
     }
   }
 
-  // Se encontrou os reagentes numerados das tabelas USF, retorna a lista completa (Nº 1, Nº 2... Nº 12, etc.)!
+  // Retorna a lista completa se capturou os itens numerados das tabelas USF
   if (reagentesEncontrados.length > 0) {
     return reagentesEncontrados;
   }
 
-  // 2. REGEX DE RESERVA: Caso o PDF não use o prefixo "Nº 1", busca por soluções isoladas seguidas de volume
+  // REGEX DE RESERVA: Para tabelas sem o prefixo "Nº 1", busca substâncias seguidas de volume
   const regexSolucaoVolume = /(?:solu[çc][ãa]o|ácido|hidr[óo]xido|álcool|lugol|fenolftale[íi]na|alaranjado|água destilada|ágar|agar|caldo)\s+[^.\n\r]*?\s+(\d+(?:[.,]\d+)?\s*(?:mL|ml|L|g|mg))\b/gi;
   let matchSol: RegExpExecArray | null;
 
@@ -229,7 +222,6 @@ function eApenasEquipamentoFisico(linha: string): boolean {
 function inferirReagentesPorTema(titulo: string, tema: string, disciplina: string): ReagenteItem[] {
   const busca = `${titulo} ${tema} ${disciplina}`.toLowerCase();
 
-  // 1. Titulação / Ácido-Base / Química / Reagentes USF
   if (/titula[çc][ãa]o|[áa]cido|base|alaranjado|l[áa]tico|indicador|molar/i.test(busca)) {
     return [
       {
@@ -247,28 +239,6 @@ function inferirReagentesPorTema(titulo: string, tema: string, disciplina: strin
         origemBancada: "Bancada do Aluno",
         observacoes: "Disponibilizado na Bancada do Aluno",
         categoria: "Ácido / Base"
-      }
-    ];
-  }
-
-  // 2. Sangue / Hematologia / Coleta / Esfregaço
-  if (/sangue|hematologia|esfrega[çc]o|leuc[óo]cito|hem[áa]cia|coleta de sangue/i.test(busca)) {
-    return [
-      {
-        nome: "Corante de Leishman / Giemsa",
-        quantidade: "10 mL",
-        concentracao: "Pronto para uso",
-        origemBancada: "Bancada do Aluno",
-        observacoes: "Disponibilizado na Bancada do Aluno",
-        categoria: "Indicador / Corante"
-      },
-      {
-        nome: "Álcool Etílico (Etanol)",
-        quantidade: "50 mL",
-        concentracao: "70% v/v",
-        origemBancada: "Bancada do Aluno",
-        observacoes: "Disponibilizado na Bancada do Aluno",
-        categoria: "Solvente / Diluente"
       }
     ];
   }
