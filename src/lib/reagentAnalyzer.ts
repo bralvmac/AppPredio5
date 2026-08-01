@@ -44,7 +44,7 @@ export async function analisarReagentesDoRoteiro(roteiro: Roteiro): Promise<Resu
         requerReagentes: true,
         roteiroTitulo: roteiro.titulo,
         reagentes: extraidos,
-        resumoGeral: `Identificado(s) ${extraidos.length} reagente(s) e solução(ões) nas seções "Disponibilização - Bancada do Aluno / Apoio".`
+        resumoGeral: `Foram identificados ${extraidos.length} reagente(s) e solução(ões) com suas respectivas quantidades nas bancadas.`
       };
     }
   }
@@ -92,7 +92,7 @@ async function extrairTextoDeUrlPdf(url: string): Promise<string> {
     const page = await pdf.getPage(i);
     const content = await page.getTextContent();
     
-    // Concatena mantendo quebras de linha para reconhecer linhas da tabela
+    // Concatena texto de forma estruturada
     let linhaAtual = '';
     for (const item of content.items as any[]) {
       linhaAtual += item.str + ' ';
@@ -104,41 +104,90 @@ async function extrairTextoDeUrlPdf(url: string): Promise<string> {
 }
 
 /**
- * Procura EXCLUSIVAMENTE os blocos de texto contidos após:
- * - "DISPONIBILIZAÇÃO - BANCADA DO ALUNO"
- * - "DISPONIBILIZAÇÃO - BANCADA DE APOIO"
+ * Algoritmo refinado para extrair APENAS reagentes e suas quantidades exatas
+ * a partir das tabelas "DISPONIBILIZAÇÃO - BANCADA DO ALUNO / APOIO"
  */
 function extrairReagentesDasSecoesBancada(texto: string): ReagenteItem[] {
   const reagentesEncontrados: ReagenteItem[] = [];
 
-  // Expressão regular para isolar as seções de bancada no documento
-  const regexSecaoBancada = /DISPONIBILIZA[ÇC][ÃA]O\s*[\s–-]\s*BANCADA\s+D[EO]\s+(ALUNO|APOIO)([\s\S]*?)(?=DISPONIBILIZA[ÇC][ÃA]O|PROP[ÓO]SITO|PROCEDIMENTO|1\.|2\.|3\.|$)/gi;
+  // Limpa repetições de cabeçalhos de tabela USF que poluem o fluxo de texto
+  const textoLimpo = texto.replace(/•?\s*Materiais\s*•?\s*Reagentes\s*•?\s*Equipamentos\s*Quant\.?/gi, ' ');
 
-  let match: RegExpExecArray | null;
+  // 1. REGEX PRIMÁRIA: Captura itens numerados das tabelas de reagentes (ex: "Nº 1 – Solução e Alaranjado de Metila 0,1 M 10 ml", "Nº 2 – Ácido Lático 0,1 M 30 ml")
+  const regexItemNumerado = /(Nº\s*\d+\s*[–-]\s*[^Nº\n\r]+?)\s+(\d+(?:[.,]\d+)?\s*(?:mL|ml|L|g|mg|gotas|tubos|frascos))\b/gi;
 
-  while ((match = regexSecaoBancada.exec(texto)) !== null) {
-    const tipoBancada = match[1].toUpperCase() === 'ALUNO' ? 'Bancada do Aluno' : 'Bancada de Apoio';
-    const blocoTexto = match[2];
+  let matchNumerado: RegExpExecArray | null;
 
-    // Analisa linha por linha do bloco extraído da tabela
-    const linhas = blocoTexto.split(/[\r\n]+/);
+  while ((matchNumerado = regexItemNumerado.exec(textoLimpo)) !== null) {
+    const todoOItem = matchNumerado[1].trim(); // Ex: "Nº 1 – Solução e Alaranjado de Metila 0,1 M"
+    const quantidade = matchNumerado[2].trim(); // Ex: "10 ml"
 
-    for (let linha of linhas) {
-      linha = linha.trim();
-      if (!linha || linha.length < 3) continue;
+    // Extrai a concentração (ex: "0,1 M", "1 M", "70%", "0,1 N")
+    const matchConc = todoOItem.match(/(\d+(?:[.,]\d+)?\s*(?:M|mol\/L|N|%))/i);
+    const concentracao = matchConc ? matchConc[1] : undefined;
 
-      // Descarta cabeçalhos repetidos da tabela ("Materiais", "Reagentes", "Equipamentos", "Quant.")
-      if (/^(?:materiais|reagentes|equipamentos|quant\.?|quantidade)$/i.test(linha)) continue;
+    // Remove a concentração do nome para exibição limpa
+    let nomeFormatado = todoOItem;
+    if (concentracao) {
+      nomeFormatado = nomeFormatado.replace(concentracao, '').replace(/\s+/g, ' ').trim();
+    }
 
-      // Descarta equipamentos puramente físicos sem substâncias químicas
-      if (eApenasEquipamentoFisico(linha)) continue;
+    // Identifica se pertence à Bancada do Aluno ou Bancada de Apoio
+    const indIndex = matchNumerado.index;
+    const trechoAnterior = textoLimpo.substring(Math.max(0, indIndex - 400), indIndex);
+    const origemBancada: ReagenteItem['origemBancada'] = /APOIO/i.test(trechoAnterior) ? 'Bancada de Apoio' : 'Bancada do Aluno';
 
-      // Identifica itens que contêm soluções, compostos, concentrações (0,1 M, %, mL) ou numeração de frascos (Nº 1, Nº 2)
-      if (eReagenteOuSolucao(linha)) {
-        const itemExtraido = formatarItemReagente(linha, tipoBancada);
-        if (itemExtraido && !reagentesEncontrados.some(r => r.nome.toLowerCase() === itemExtraido.nome.toLowerCase())) {
-          reagentesEncontrados.push(itemExtraido);
-        }
+    let categoria: ReagenteItem['categoria'] = 'Solução Reativa';
+    if (/ácido|hidr[óo]xido|hcl|naoh|h2so4/i.test(nomeFormatado)) categoria = 'Ácido / Base';
+    else if (/indicador|lugol|fenolftale[íi]na|metileno|alaranjado/i.test(nomeFormatado)) categoria = 'Indicador / Corante';
+
+    reagentesEncontrados.push({
+      nome: nomeFormatado,
+      quantidade: quantidade,
+      concentracao: concentracao,
+      origemBancada: origemBancada,
+      categoria: categoria,
+      observacoes: `Disponibilizado na ${origemBancada}`
+    });
+  }
+
+  // Se encontrou os reagentes numerados das tabelas USF, retorna diretamente sem incluir vidrarias!
+  if (reagentesEncontrados.length > 0) {
+    return reagentesEncontrados;
+  }
+
+  // 2. REGEX SECUNDÁRIA: Caso não haja numeração "Nº 1", busca por substâncias específicas seguidas de volumes (mL, L, g)
+  const regexSolucaoVolume = /(?:solu[çc][ãa]o|ácido|hidr[óo]xido|álcool|lugol|fenolftale[íi]na|alaranjado|água destilada|ágar|agar|caldo)\s+[^.\n\r]*?\s+(\d+(?:[.,]\d+)?\s*(?:mL|ml|L|g|mg))\b/gi;
+  let matchSol: RegExpExecArray | null;
+
+  while ((matchSol = regexSolucaoVolume.exec(textoLimpo)) !== null) {
+    const linha = matchSol[0].trim();
+    
+    // Ignora vidrarias e equipamentos físicos
+    if (eApenasEquipamentoFisico(linha)) continue;
+
+    const matchQtd = linha.match(/(.*?)\s+(\d+(?:[.,]\d+)?\s*(?:mL|ml|L|g|mg))\s*$/i);
+    if (matchQtd) {
+      const nome = matchQtd[1].trim();
+      const quantidade = matchQtd[2].trim();
+
+      const matchConc = nome.match(/(\d+(?:[.,]\d+)?\s*(?:M|mol\/L|N|%))/i);
+      const concentracao = matchConc ? matchConc[1] : undefined;
+
+      let nomeLimpo = nome;
+      if (concentracao) {
+        nomeLimpo = nomeLimpo.replace(concentracao, '').trim();
+      }
+
+      if (nomeLimpo.length > 3 && !reagentesEncontrados.some(r => r.nome.toLowerCase() === nomeLimpo.toLowerCase())) {
+        reagentesEncontrados.push({
+          nome: nomeLimpo,
+          quantidade: quantidade,
+          concentracao: concentracao,
+          origemBancada: 'Bancada do Aluno',
+          categoria: 'Solução Reativa',
+          observacoes: 'Disponibilizado na Bancada do Aluno'
+        });
       }
     }
   }
@@ -147,8 +196,7 @@ function extrairReagentesDasSecoesBancada(texto: string): ReagenteItem[] {
 }
 
 /**
- * Verifica se a linha refere-se a um equipamento físico (Becker, Gaze, Erlenmeyer, Pipeta, etc.)
- * sem reagente envolvido.
+ * Filtro de exclusão de vidrarias e equipamentos sem químicos
  */
 function eApenasEquipamentoFisico(linha: string): boolean {
   const equipamentosFisicos = [
@@ -156,69 +204,14 @@ function eApenasEquipamentoFisico(linha: string): boolean {
     /^bureta/i, /^pin[çc]a/i, /^suporte universal/i, /^proveta/i,
     /^bico de bunsen/i, /^bast[ãa]o de vidro/i, /^tubo[s]? de ensaio/i,
     /^placa de petri/i, /^l[ãa]mina/i, /^lam[íi]nula/i, /^luva/i,
-    /^garrote/i, /^peta/i, /^peneira/i, /^papel filtro/i, /^pisseta/i,
-    /^estante/i, /^pincel/i, /^tesoura/i, /^bisturi/i, /^al[çc]a/i
+    /^garrote/i, /^peta/i, /^peneira/i, /^papel filtro/i, /^pisseta/i
   ];
 
-  // Se for apenas o nome da vidraria/equipamento isolado (ex: "Becker 50 ml", "Gaze", "Erlenmeyer 125 ml")
   return equipamentosFisicos.some(regex => regex.test(linha)) && !/solu[çc][ãa]o|ácido|hidr[óo]xido|reagente|indicador|lugol|alaranjado/i.test(linha);
 }
 
 /**
- * Filtra apenas Reagentes, Soluções, Ácidos, Bases, Corantes ou itens numerados (ex: "Nº 1 – Solução...", "Ácido Lático 0,1 M")
- */
-function eReagenteOuSolucao(linha: string): boolean {
-  // Padrões típicos de reagentes do padrão USF
-  const padroes = [
-    /Nº\s*\d+/i,                                        // Ex: "Nº 1 – Solução...", "Nº 2 – Ácido..."
-    /solu[çc][ãa]o/i,                                   // Ex: "Solução e Alaranjado de Metila"
-    /ácido|hidr[óo]xido|álcool|etanol|metanol|formol/i, // Ex: "Ácido Lático", "Hidróxido de Sódio"
-    /indicador|lugol|fenolftale[íi]na|biureto|benedict/i,// Ex: "Alaranjado de Metila 0,1 M"
-    /\d+(?:[.,]\d+)?\s*(?:M|mol\/L|N|%)/i,              // Ex: "0,1 M", "1 M", "70%", "0,1N"
-    /meio de|agar|ágar|caldo|peptona|extrato/i,         // Ex: "Ágar Nutritivo"
-    /água destilada|água deionizada|solu[çc][ãa]o fisiol/i
-  ];
-
-  return padroes.some(p => p.test(linha));
-}
-
-/**
- * Formata a linha extraída do PDF no formato estruturado ReagenteItem
- */
-function formatarItemReagente(linha: string, origemBancada: ReagenteItem['origemBancada']): ReagenteItem | null {
-  // Separa quantidade no final (ex: "Nº 1 – Solução e Alaranjado de Metila 0,1 M 10 ml" -> nome: "Nº 1 – Solução...", qtd: "10 ml")
-  const matchQtd = linha.match(/(.*?)\s+(\d+(?:[.,]\d+)?\s*(?:mL|L|g|mg|gotas|tubos|frascos))\s*$/i);
-
-  let nome = linha;
-  let quantidade = 'Conforme bancada';
-
-  if (matchQtd) {
-    nome = matchQtd[1].trim();
-    quantidade = matchQtd[2].trim();
-  }
-
-  // Extrai concentração se houver (ex: "0,1 M", "10%", "1 mol/L")
-  const matchConc = nome.match(/(\d+(?:[.,]\d+)?\s*(?:M|mol\/L|N|%))/i);
-  const concentracao = matchConc ? matchConc[1] : undefined;
-
-  let categoria: ReagenteItem['categoria'] = 'Geral';
-  if (/ácido|hidr[óo]xido|hcl|naoh|h2so4/i.test(nome)) categoria = 'Ácido / Base';
-  else if (/indicador|lugol|fenolftale[íi]na|metileno|alaranjado/i.test(nome)) categoria = 'Indicador / Corante';
-  else if (/meio|agar|ágar|caldo/i.test(nome)) categoria = 'Meio de Cultura';
-  else if (/solu[çc][ãa]o|benedict|biureto/i.test(nome)) categoria = 'Solução Reativa';
-
-  return {
-    nome,
-    quantidade,
-    origemBancada,
-    concentracao,
-    categoria,
-    observacoes: `Disponibilizado na ${origemBancada}`
-  };
-}
-
-/**
- * Inferência Inteligente por Tema como Fallback caso o PDF não possua a tabela em formato de texto legível
+ * Inferência Inteligente por Tema como Fallback caso o PDF esteja escaneado em imagem
  */
 function inferirReagentesPorTema(titulo: string, tema: string, disciplina: string): ReagenteItem[] {
   const busca = `${titulo} ${tema} ${disciplina}`.toLowerCase();
@@ -227,8 +220,8 @@ function inferirReagentesPorTema(titulo: string, tema: string, disciplina: strin
   if (/titula[çc][ãa]o|[áa]cido|base|alaranjado|l[áa]tico|indicador|molar/i.test(busca)) {
     return [
       {
-        nome: "Nº 1 – Solução de Alaranjado de Metila",
-        quantidade: "10 mL por bancada",
+        nome: "Nº 1 – Solução e Alaranjado de Metila",
+        quantidade: "10 ml",
         concentracao: "0,1 M",
         origemBancada: "Bancada do Aluno",
         observacoes: "Disponibilizado na Bancada do Aluno",
@@ -236,18 +229,10 @@ function inferirReagentesPorTema(titulo: string, tema: string, disciplina: strin
       },
       {
         nome: "Nº 2 – Ácido Lático",
-        quantidade: "30 mL por bancada",
+        quantidade: "30 ml",
         concentracao: "0,1 M",
         origemBancada: "Bancada do Aluno",
         observacoes: "Disponibilizado na Bancada do Aluno",
-        categoria: "Ácido / Base"
-      },
-      {
-        nome: "Solução de Hidróxido de Sódio (NaOH)",
-        quantidade: "50 mL",
-        concentracao: "0,1 M",
-        origemBancada: "Bancada de Apoio",
-        observacoes: "Disponibilizado na Bancada de Apoio",
         categoria: "Ácido / Base"
       }
     ];
@@ -257,8 +242,8 @@ function inferirReagentesPorTema(titulo: string, tema: string, disciplina: strin
   if (/sangue|hematologia|esfrega[çc]o|leuc[óo]cito|hem[áa]cia|coleta de sangue/i.test(busca)) {
     return [
       {
-        nome: "Corante de Leishman / Giemsa / May-Grünwald",
-        quantidade: "10 mL por bancada",
+        nome: "Corante de Leishman / Giemsa",
+        quantidade: "10 mL",
         concentracao: "Pronto para uso",
         origemBancada: "Bancada do Aluno",
         observacoes: "Disponibilizado na Bancada do Aluno",
@@ -266,31 +251,10 @@ function inferirReagentesPorTema(titulo: string, tema: string, disciplina: strin
       },
       {
         nome: "Álcool Etílico (Etanol)",
-        quantidade: "50 mL por bancada",
+        quantidade: "50 mL",
         concentracao: "70% v/v",
         origemBancada: "Bancada do Aluno",
         observacoes: "Disponibilizado na Bancada do Aluno",
-        categoria: "Solvente / Diluente"
-      }
-    ];
-  }
-
-  // 3. Meio de Cultura / Microbiologia
-  if (/meio de cultura|microbiologia|agar|[áa]gar|bact[ée]ria|semeadura/i.test(busca)) {
-    return [
-      {
-        nome: "Ágar Nutritivo / Ágar MacConkey",
-        quantidade: "28 g por Litro",
-        concentracao: "2,8% p/v",
-        origemBancada: "Bancada de Apoio",
-        observacoes: "Disponibilizado na Bancada de Apoio para autoclave",
-        categoria: "Meio de Cultura"
-      },
-      {
-        nome: "Água Destilada",
-        quantidade: "1000 mL",
-        origemBancada: "Bancada de Apoio",
-        observacoes: "Disponibilizado na Bancada de Apoio",
         categoria: "Solvente / Diluente"
       }
     ];
