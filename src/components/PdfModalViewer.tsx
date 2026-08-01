@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
-import { X, Download, Share2, ExternalLink, Check, FileText, GraduationCap, Building2, Layers, BookOpen, User, Loader2, MessageCircle } from 'lucide-react';
+import { X, Download, Share2, ExternalLink, Check, FileText, GraduationCap, Building2, Layers, BookOpen, User, Loader2, MessageCircle, FlaskConical } from 'lucide-react';
 import { Roteiro } from '../types/roteiro';
 import { baixarPdfRoteiro, compartilharNoWhatsApp } from '../lib/downloadHelper';
 
 interface PdfModalViewerProps {
   roteiro: Roteiro | null;
   onClose: () => void;
+  onOpenReagentes?: (roteiro: Roteiro) => void;
 }
 
-export const PdfModalViewer: React.FC<PdfModalViewerProps> = ({ roteiro, onClose }) => {
+export const PdfModalViewer: React.FC<PdfModalViewerProps> = ({ roteiro, onClose, onOpenReagentes }) => {
   const [copiado, setCopiado] = useState(false);
   const [baixando, setBaixando] = useState(false);
 
@@ -59,6 +60,18 @@ export const PdfModalViewer: React.FC<PdfModalViewerProps> = ({ roteiro, onClose
           {/* Ações do Cabeçalho */}
           <div className="flex items-center gap-2 shrink-0">
             
+            {/* Botão Reagentes */}
+            {onOpenReagentes && (
+              <button
+                onClick={() => onOpenReagentes(roteiro)}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-400 hover:bg-amber-500/20 text-xs font-bold transition-all"
+                title="Analisar e Listar Reagentes da Aula Prática"
+              >
+                <FlaskConical className="w-4 h-4" />
+                <span className="hidden md:inline">Reagentes</span>
+              </button>
+            )}
+
             {/* Botão Compartilhar WhatsApp */}
             <button
               onClick={handleCompartilharWhatsApp}

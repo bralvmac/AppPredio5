@@ -3,6 +3,7 @@ import { FiltrosBusca } from './components/FiltrosBusca';
 import { CardRoteiro } from './components/CardRoteiro';
 import { PastaRoteirosView } from './components/PastaRoteirosView';
 import { PdfModalViewer } from './components/PdfModalViewer';
+import { ReagentesModal } from './components/ReagentesModal';
 import { UploadModal } from './components/UploadModal';
 import { Roteiro, FiltrosState, OpcoesFiltros } from './types/roteiro';
 import { buscarRoteiros, deletarRoteiro, supabase, isSupabaseConfigured } from './lib/supabaseClient';
@@ -48,6 +49,7 @@ export const App: React.FC = () => {
 
   // Modais
   const [roteiroSelecionado, setRoteiroSelecionado] = useState<Roteiro | null>(null);
+  const [roteiroParaReagentes, setRoteiroParaReagentes] = useState<Roteiro | null>(null);
   const [uploadModalAberto, setUploadModalAberto] = useState<boolean>(false);
 
   // Estado dos Filtros
@@ -281,6 +283,7 @@ export const App: React.FC = () => {
             <PastaRoteirosView
               roteiros={roteirosFiltrados}
               onOpenPdf={setRoteiroSelecionado}
+              onOpenReagentes={setRoteiroParaReagentes}
               onDeletar={handleDeletarRoteiro}
               tema={tema}
             />
@@ -292,6 +295,7 @@ export const App: React.FC = () => {
                   key={roteiro.id}
                   roteiro={roteiro}
                   onOpenPdf={setRoteiroSelecionado}
+                  onOpenReagentes={setRoteiroParaReagentes}
                   onDeletar={handleDeletarRoteiro}
                 />
               ))}
@@ -331,6 +335,14 @@ export const App: React.FC = () => {
       <PdfModalViewer
         roteiro={roteiroSelecionado}
         onClose={() => setRoteiroSelecionado(null)}
+        onOpenReagentes={setRoteiroParaReagentes}
+      />
+
+      {/* Modal de Análise de Reagentes */}
+      <ReagentesModal
+        roteiro={roteiroParaReagentes}
+        onClose={() => setRoteiroParaReagentes(null)}
+        isDark={isDark}
       />
 
       {/* Modal de Upload de Roteiros */}

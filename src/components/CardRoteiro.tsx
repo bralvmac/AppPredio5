@@ -1,17 +1,19 @@
 import React, { useState } from 'react';
-import { Eye, Download, Share2, Trash2, Check, AlertTriangle, BookOpen, GraduationCap, User, Layers, Building2, Loader2, MessageCircle } from 'lucide-react';
+import { Eye, Download, Share2, Trash2, Check, AlertTriangle, BookOpen, GraduationCap, User, Layers, Building2, Loader2, MessageCircle, FlaskConical } from 'lucide-react';
 import { Roteiro } from '../types/roteiro';
 import { baixarPdfRoteiro, compartilharNoWhatsApp } from '../lib/downloadHelper';
 
 interface CardRoteiroProps {
   roteiro: Roteiro;
   onOpenPdf: (roteiro: Roteiro) => void;
+  onOpenReagentes?: (roteiro: Roteiro) => void;
   onDeletar: (id: string, arquivoPath?: string) => void;
 }
 
 export const CardRoteiro: React.FC<CardRoteiroProps> = ({
   roteiro,
   onOpenPdf,
+  onOpenReagentes,
   onDeletar
 }) => {
   const [copiado, setCopiado] = useState(false);
@@ -102,7 +104,7 @@ export const CardRoteiro: React.FC<CardRoteiroProps> = ({
           </button>
         </div>
 
-        {/* Título e Tema do Roteiro - Texto Completo Sem Truncar */}
+        {/* Título e Tema do Roteiro */}
         <h3 className="text-base font-extrabold text-slate-900 dark:text-white group-hover:text-brand-600 dark:group-hover:text-brand-300 transition-colors mb-2 break-words whitespace-normal leading-snug">
           {roteiro.titulo}
         </h3>
@@ -137,14 +139,25 @@ export const CardRoteiro: React.FC<CardRoteiroProps> = ({
       </div>
 
       {/* Botões de Ação */}
-      <div className="pt-4 mt-2 border-t border-slate-200 dark:border-slate-800/80 flex items-center gap-2">
+      <div className="pt-4 mt-2 border-t border-slate-200 dark:border-slate-800/80 flex flex-wrap sm:flex-nowrap items-center gap-2">
         <button
           onClick={() => onOpenPdf(roteiro)}
-          className="flex-1 inline-flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl text-xs font-extrabold text-slate-950 bg-gradient-to-r from-brand-500 to-teal-400 hover:from-brand-400 hover:to-teal-300 transition-all shadow-md shadow-brand-500/10 cursor-pointer"
+          className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs font-extrabold text-slate-950 bg-gradient-to-r from-brand-500 to-teal-400 hover:from-brand-400 hover:to-teal-300 transition-all shadow-md shadow-brand-500/10 cursor-pointer"
         >
           <Eye className="w-4 h-4 stroke-[2.5]" />
           <span>Visualizar</span>
         </button>
+
+        {/* Botão Reagentes */}
+        {onOpenReagentes && (
+          <button
+            onClick={() => onOpenReagentes(roteiro)}
+            className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-400 hover:bg-amber-500/20 transition-colors cursor-pointer"
+            title="Analisar e Listar Reagentes Necessários"
+          >
+            <FlaskConical className="w-4 h-4" />
+          </button>
+        )}
 
         {/* WhatsApp Share */}
         <button

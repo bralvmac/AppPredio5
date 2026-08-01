@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { Folder, FolderOpen, ChevronRight, ChevronDown, FileText, Eye, Download, Share2, Trash2, Check, AlertTriangle, Loader2, MessageCircle } from 'lucide-react';
+import { Folder, FolderOpen, ChevronRight, ChevronDown, FileText, Eye, Download, Share2, Trash2, Check, AlertTriangle, Loader2, MessageCircle, FlaskConical } from 'lucide-react';
 import { Roteiro } from '../types/roteiro';
 import { baixarPdfRoteiro, compartilharNoWhatsApp } from '../lib/downloadHelper';
 
 interface PastaRoteirosViewProps {
   roteiros: Roteiro[];
   onOpenPdf: (roteiro: Roteiro) => void;
+  onOpenReagentes: (roteiro: Roteiro) => void;
   onDeletar: (id: string, arquivoPath?: string) => void;
   tema?: 'dark' | 'light';
 }
@@ -18,6 +19,7 @@ interface EstruturaSubpastas {
 export const PastaRoteirosView: React.FC<PastaRoteirosViewProps> = ({
   roteiros,
   onOpenPdf,
+  onOpenReagentes,
   onDeletar,
   tema = 'dark'
 }) => {
@@ -220,7 +222,7 @@ export const PastaRoteirosView: React.FC<PastaRoteirosViewProps> = ({
                   }}
                 >
                   
-                  {/* Subpasta 1: Presencial - Cor Verde Esmeralda Vibrante */}
+                  {/* Subpasta 1: Presencial */}
                   {totalPresencial > 0 && (
                     <SubpastaModalidadeCard
                       chaveSubpasta={`${cursoNome}-Presencial`}
@@ -230,12 +232,13 @@ export const PastaRoteirosView: React.FC<PastaRoteirosViewProps> = ({
                       estaAberta={Boolean(subpastasAbertas[`${cursoNome}-Presencial`])}
                       onToggle={() => toggleSubpasta(`${cursoNome}-Presencial`)}
                       onOpenPdf={onOpenPdf}
+                      onOpenReagentes={onOpenReagentes}
                       onDeletar={onDeletar}
                       isDark={isDark}
                     />
                   )}
 
-                  {/* Subpasta 2: Semi-presencial - Cor Índigo / Azul */}
+                  {/* Subpasta 2: Semi-presencial */}
                   {totalSemi > 0 && (
                     <SubpastaModalidadeCard
                       chaveSubpasta={`${cursoNome}-Semi-presencial`}
@@ -245,6 +248,7 @@ export const PastaRoteirosView: React.FC<PastaRoteirosViewProps> = ({
                       estaAberta={Boolean(subpastasAbertas[`${cursoNome}-Semi-presencial`])}
                       onToggle={() => toggleSubpasta(`${cursoNome}-Semi-presencial`)}
                       onOpenPdf={onOpenPdf}
+                      onOpenReagentes={onOpenReagentes}
                       onDeletar={onDeletar}
                       isDark={isDark}
                     />
@@ -262,7 +266,7 @@ export const PastaRoteirosView: React.FC<PastaRoteirosViewProps> = ({
   );
 };
 
-// Componente da Subpasta por Modalidade (2º Nível - Apenas Ícone da Pasta)
+// Componente da Subpasta por Modalidade (2º Nível)
 const SubpastaModalidadeCard: React.FC<{
   chaveSubpasta: string;
   tituloModalidade: string;
@@ -271,6 +275,7 @@ const SubpastaModalidadeCard: React.FC<{
   estaAberta: boolean;
   onToggle: () => void;
   onOpenPdf: (roteiro: Roteiro) => void;
+  onOpenReagentes: (roteiro: Roteiro) => void;
   onDeletar: (id: string, arquivoPath?: string) => void;
   isDark: boolean;
 }> = ({
@@ -280,6 +285,7 @@ const SubpastaModalidadeCard: React.FC<{
   estaAberta,
   onToggle,
   onOpenPdf,
+  onOpenReagentes,
   onDeletar,
   isDark
 }) => {
@@ -304,7 +310,6 @@ const SubpastaModalidadeCard: React.FC<{
         }}
       >
         <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-2">
-          {/* Apenas o Ícone da Pasta */}
           <div
             className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center border shrink-0"
             style={
@@ -366,6 +371,7 @@ const SubpastaModalidadeCard: React.FC<{
               key={roteiro.id}
               roteiro={roteiro}
               onOpenPdf={onOpenPdf}
+              onOpenReagentes={onOpenReagentes}
               onDeletar={onDeletar}
               isDark={isDark}
             />
@@ -377,13 +383,14 @@ const SubpastaModalidadeCard: React.FC<{
   );
 };
 
-// Linha Estilo Arquivo do Windows Explorer Adaptada com Quebra Completa de Texto para Celulares
+// Linha Estilo Arquivo do Windows Explorer com Botão Reagentes
 const ItemRoteiroArquivoRow: React.FC<{
   roteiro: Roteiro;
   onOpenPdf: (roteiro: Roteiro) => void;
+  onOpenReagentes: (roteiro: Roteiro) => void;
   onDeletar: (id: string, arquivoPath?: string) => void;
   isDark: boolean;
-}> = ({ roteiro, onOpenPdf, onDeletar, isDark }) => {
+}> = ({ roteiro, onOpenPdf, onOpenReagentes, onDeletar, isDark }) => {
   const [copiado, setCopiado] = useState(false);
   const [baixando, setBaixando] = useState(false);
   const [confirmandoExclusao, setConfirmandoExclusao] = useState(false);
@@ -433,7 +440,7 @@ const ItemRoteiroArquivoRow: React.FC<{
       }}
     >
       
-      {/* Nome, Modelo e Metadados com Quebra Total de Texto (Sem Truncamento no Celular) */}
+      {/* Nome, Modelo e Metadados com Quebra Total de Texto */}
       <div className="flex items-start gap-2.5 w-full">
         <div
           className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg border flex items-center justify-center shrink-0 mt-0.5"
@@ -448,7 +455,7 @@ const ItemRoteiroArquivoRow: React.FC<{
 
         <div className="min-w-0 flex-1 space-y-2">
           
-          {/* Título do Roteiro - QUEBRA EM VÁRIAS LINHAS NO CELULAR SEM TRUNCAR */}
+          {/* Título do Roteiro */}
           <div className="flex flex-wrap items-center gap-2">
             <span
               className="text-xs sm:text-sm font-black leading-snug break-words whitespace-normal"
@@ -457,7 +464,7 @@ const ItemRoteiroArquivoRow: React.FC<{
               {roteiro.titulo}
             </span>
 
-            {/* Badge Modelo Componente Colorida (Básico / Específico) */}
+            {/* Badge Modelo Componente */}
             {roteiro.modeloComponente && (
               <span
                 className="inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-extrabold border shrink-0"
@@ -476,10 +483,10 @@ const ItemRoteiroArquivoRow: React.FC<{
             )}
           </div>
 
-          {/* Metadados Discriminados com Quebra Linha por Linha no Celular */}
+          {/* Metadados Discriminados */}
           <div className="flex flex-col gap-1.5 text-xs pt-1 border-t" style={{ borderColor: isDark ? '#1e293b' : '#f1f5f9' }}>
             
-            {/* Tema Completo em Várias Linhas */}
+            {/* Tema Completo */}
             <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5 w-full">
               <strong
                 className="font-black shrink-0"
@@ -495,7 +502,7 @@ const ItemRoteiroArquivoRow: React.FC<{
               </span>
             </div>
 
-            {/* Unidade Curricular Completa em Várias Linhas */}
+            {/* Unidade Curricular Completa */}
             <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5 w-full">
               <strong
                 className="font-black shrink-0"
@@ -511,7 +518,7 @@ const ItemRoteiroArquivoRow: React.FC<{
               </span>
             </div>
 
-            {/* Docente / Tutor Completo em Várias Linhas */}
+            {/* Docente / Tutor Completo */}
             {roteiro.docente && roteiro.docente !== 'Não informado' && (
               <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5 w-full">
                 <strong
@@ -536,7 +543,7 @@ const ItemRoteiroArquivoRow: React.FC<{
 
       {/* Ações Rápidas em Linha Organizada */}
       <div
-        className="flex items-center gap-1.5 sm:gap-2 w-full justify-end pt-2 border-t"
+        className="flex items-center gap-1.5 sm:gap-2 w-full justify-end pt-2 border-t flex-wrap sm:flex-nowrap"
         style={{ borderColor: isDark ? '#1e293b' : '#e2e8f0' }}
       >
         
@@ -547,6 +554,21 @@ const ItemRoteiroArquivoRow: React.FC<{
         >
           <Eye className="w-3.5 h-3.5 mr-1 stroke-[2.5]" />
           <span>Visualizar</span>
+        </button>
+
+        {/* Botão Novo: 🧪 Reagentes */}
+        <button
+          onClick={() => onOpenReagentes(roteiro)}
+          className="inline-flex items-center justify-center px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all shadow-sm cursor-pointer border"
+          style={
+            isDark
+              ? { backgroundColor: 'rgba(245, 158, 11, 0.15)', color: '#fbbf24', borderColor: 'rgba(245, 158, 11, 0.3)' }
+              : { backgroundColor: '#fef3c7', color: '#78350f', borderColor: '#fde68a' }
+          }
+          title="Analisar e Listar Reagentes da Aula Prática"
+        >
+          <FlaskConical className="w-3.5 h-3.5 mr-1" />
+          <span>Reagentes</span>
         </button>
 
         {/* Compartilhar WhatsApp */}
