@@ -103,32 +103,62 @@ async function extrairTextoDeUrlPdf(url: string): Promise<string> {
 }
 
 /**
- * Algoritmo cirúrgico: captura o item do prefixo "Nº X" até a sua quantidade (ex: "100 ml").
- * Qualquer texto após a quantidade é 100% DESCARTADO.
+ * ALGORITMO DE FATIAMENTO POR ÍNDICES:
+ * Localiza todas as ocorrências de "Nº 1", "Nº 2"... "Nº 12" e fatia o texto em pedaços exatos.
+ * Garante 100% de captura de TODOS os itens sem pular nenhum número!
  */
 function extrairReagentesDasSecoesBancada(texto: string): ReagenteItem[] {
   const reagentesEncontrados: ReagenteItem[] = [];
 
-  // Normaliza a numeração de itens no texto
-  const textoNormalizado = texto.replace(/N[º°]\s*(\d+)/gi, 'Nº $1');
+  // Normaliza variações de numeração (Nº 1, Nº1, N° 1, No 1)
+  const textoNormalizado = texto.replace(/N[º°o]\s*(\d+)/gi, 'Nº $1');
 
-  // REGEX CIRÚRGICA:
-  // Grupo 1: "Nº X – Nome do Reagente e Concentração"
-  // Grupo 2: Quantidade (ex: "100 ml", "50 mL", "25 ml", "10 gotas", "5 g")
-  const regexItemNumerado = /(Nº\s*\d+\s*[–-][^Nº\n\r]*?)\s+(\d+(?:[.,]\d+)?\s*(?:mL|ml|L|g|mg|gotas|tubos|frascos|litro|litros|unidades|unidade|caixa|pacote|frasco|frascos))\b/gi;
-
+  // Encontra todas as posições dos marcadores "Nº <numero>"
+  const regexMarcador = /Nº\s*(\d+)/gi;
+  const marcadores: { numero: number; index: number }[] = [];
   let match: RegExpExecArray | null;
 
-  while ((match = regexItemNumerado.exec(textoNormalizado)) !== null) {
-    const textoAntesQtd = match[1].trim(); // ex: "Nº 12 – Amido 1%"
-    const quantidade = match[2].trim();    // ex: "100 ml"
+  while ((match = regexMarcador.exec(textoNormalizado)) !== null) {
+    marcadores.push({
+      numero: parseInt(match[1], 10),
+      index: match.index
+    });
+  }
 
-    // Procura a concentração estrita (ex: "1%", "0,1 M", "1 M", "70%", "0,1 N")
-    const matchConc = textoAntesQtd.match(/(\d+(?:[.,]\d+)?\s*(?:M\b|mol\/L|N\b|%))/i);
+  if (marcadores.length === 0) {
+    return extrairReagentesSemNumeracao(textoNormalizado);
+  }
+
+  // Ordena os marcadores por posição no texto
+  marcadores.sort((a, b) => a.index - b.index);
+
+  // Processa cada pedaço (chunk) entre o marcador atual e o próximo marcador
+  for (let i = 0; i < marcadores.length; i++) {
+    const atual = marcadores[i];
+    const proximoIndex = i < marcadores.length - 1 ? marcadores[i + 1].index : textoNormalizado.length;
+
+    let chunk = textoNormalizado.substring(atual.index, proximoIndex).trim();
+
+    // Se for o último item, corta qualquer texto de seções finais do PDF
+    if (i === marcadores.length - 1) {
+      chunk = chunk.split(/\s+(?:•|CONSIDERA[ÇC][ÕO]ES|Acesso\s+aos\s+POPs|Banho\s+Maria|Capela|Bancada\s+Lateral|PROP[ÓO]SITO|PROCEDIMENTO)/i)[0].trim();
+    }
+
+    // Extrai a quantidade (ex: "200 ml", "50 ml", "100 ml", "25 ml", "5 g")
+    const matchQtd = chunk.match(/(\d+(?:[.,]\d+)?\s*(?:mL|ml|L|g|mg|gotas|tubos|frascos|litro|litros|unidades|unidade|caixa|pacote|frasco|frascos))\b/i);
+    const quantidade = matchQtd ? matchQtd[1].trim() : 'Conforme bancada';
+
+    // Extrai a concentração estrita (ex: "1%", "5%", "0,1 M", "1 M", "0,1 N")
+    const matchConc = chunk.match(/(\d+(?:[.,]\d+)?\s*(?:M\b|mol\/L|N\b|%))/i);
     const concentracao = matchConc ? matchConc[1].trim() : undefined;
 
-    // Remove a concentração e limpa o nome do reagente
-    let nomeLimpo = textoAntesQtd;
+    // Se houver quantidade, corta tudo o que estiver DEPOIS da quantidade no chunk
+    if (matchQtd && matchQtd.index !== undefined) {
+      chunk = chunk.substring(0, matchQtd.index).trim();
+    }
+
+    // Remove a concentração do nome
+    let nomeLimpo = chunk;
     if (concentracao) {
       nomeLimpo = nomeLimpo.replace(concentracao, '');
     }
@@ -139,15 +169,14 @@ function extrairReagentesDasSecoesBancada(texto: string): ReagenteItem[] {
       .trim();
 
     // Identifica se pertence à Bancada do Aluno ou Bancada de Apoio
-    const indIndex = match.index;
-    const trechoAnterior = textoNormalizado.substring(Math.max(0, indIndex - 400), indIndex);
+    const trechoAnterior = textoNormalizado.substring(Math.max(0, atual.index - 400), atual.index);
     const origemBancada: ReagenteItem['origemBancada'] = /APOIO/i.test(trechoAnterior) ? 'Bancada de Apoio' : 'Bancada do Aluno';
 
     let categoria: ReagenteItem['categoria'] = 'Solução Reativa';
     if (/ácido|hidr[óo]xido|hcl|naoh|h2so4/i.test(nomeLimpo)) categoria = 'Ácido / Base';
     else if (/indicador|lugol|fenolftale[íi]na|metileno|alaranjado/i.test(nomeLimpo)) categoria = 'Indicador / Corante';
 
-    if (nomeLimpo.length > 3 && !reagentesEncontrados.some(r => r.nome.toLowerCase() === nomeLimpo.toLowerCase())) {
+    if (nomeLimpo.length > 2) {
       reagentesEncontrados.push({
         nome: nomeLimpo,
         quantidade: quantidade,
@@ -159,16 +188,24 @@ function extrairReagentesDasSecoesBancada(texto: string): ReagenteItem[] {
     }
   }
 
-  // Retorna a lista completa se capturou os itens numerados das tabelas USF
-  if (reagentesEncontrados.length > 0) {
-    return reagentesEncontrados;
-  }
+  // Ordena numericamente por "Nº 1", "Nº 2", "Nº 3"... "Nº 12"
+  return reagentesEncontrados.sort((a, b) => {
+    const numA = parseInt((a.nome.match(/Nº\s*(\d+)/i) || [])[1] || '0', 10);
+    const numB = parseInt((b.nome.match(/Nº\s*(\d+)/i) || [])[1] || '0', 10);
+    return numA - numB;
+  });
+}
 
-  // REGEX DE RESERVA: Para tabelas sem o prefixo "Nº 1", busca substâncias seguidas de volume
+/**
+ * Fallback para tabelas sem o prefixo "Nº X"
+ */
+function extrairReagentesSemNumeracao(texto: string): ReagenteItem[] {
+  const reagentesEncontrados: ReagenteItem[] = [];
+
   const regexSolucaoVolume = /(?:solu[çc][ãa]o|ácido|hidr[óo]xido|álcool|lugol|fenolftale[íi]na|alaranjado|água destilada|ágar|agar|caldo)\s+[^.\n\r]*?\s+(\d+(?:[.,]\d+)?\s*(?:mL|ml|L|g|mg))\b/gi;
   let matchSol: RegExpExecArray | null;
 
-  while ((matchSol = regexSolucaoVolume.exec(textoNormalizado)) !== null) {
+  while ((matchSol = regexSolucaoVolume.exec(texto)) !== null) {
     const linha = matchSol[0].trim();
     if (eApenasEquipamentoFisico(linha)) continue;
 
