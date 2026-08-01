@@ -26,7 +26,7 @@ export interface ResultadoAnaliseReagentes {
 export async function analisarReagentesDoRoteiro(roteiro: Roteiro): Promise<ResultadoAnaliseReagentes> {
   let textoPdf = '';
 
-  // 1. Extração do texto do PDF
+  // 1. Extração do texto do PDF com Reconstrução Geométrica por Coordenadas (X, Y)
   if (roteiro.pdfUrl) {
     try {
       textoPdf = await extrairTextoDeUrlPdf(roteiro.pdfUrl);
@@ -73,7 +73,9 @@ export async function analisarReagentesDoRoteiro(roteiro: Roteiro): Promise<Resu
 }
 
 /**
- * Extrai o texto do PDF navegando pelas páginas
+ * RECONSTRUÇÃO GEOMÉTRICA DE LINHAS DE TABELA DO PDF:
+ * Agrupa os fragmentos de texto pelas coordenadas Y (linha da página) e X (colunas da tabela).
+ * Evita que subscritos (como HNO₃ ou NH₄OH) e colunas laterais vazem para linhas vizinhas.
  */
 async function extrairTextoDeUrlPdf(url: string): Promise<string> {
   pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
@@ -85,18 +87,52 @@ async function extrairTextoDeUrlPdf(url: string): Promise<string> {
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
   
   let textoTotal = '';
-  // Navega até 10 páginas para capturar as tabelas de disponibilização de bancada
   const numPaginas = Math.min(pdf.numPages, 10);
 
   for (let i = 1; i <= numPaginas; i++) {
     const page = await pdf.getPage(i);
     const content = await page.getTextContent();
-    
-    let linhaAtual = '';
-    for (const item of content.items as any[]) {
-      linhaAtual += item.str + ' ';
+
+    // Mapeia os itens de texto com suas posições exatas X e Y
+    const itemsComPosicao = content.items
+      .filter((item: any) => item.str && item.str.trim().length > 0)
+      .map((item: any) => {
+        const x = item.transform ? item.transform[4] : 0;
+        const y = item.transform ? item.transform[5] : 0;
+        return { str: item.str, x, y };
+      });
+
+    // Agrupa os elementos pertencentes à mesma linha horizontal (tolerância de Y <= 4.5px)
+    const linhasMap: { y: number; items: { str: string; x: number }[] }[] = [];
+
+    for (const item of itemsComPosicao) {
+      const linhaExistente = linhasMap.find(l => Math.abs(l.y - item.y) <= 4.5);
+      if (linhaExistente) {
+        linhaExistente.items.push(item);
+      } else {
+        linhasMap.push({ y: item.y, items: [item] });
+      }
     }
-    textoTotal += linhaAtual + '\n';
+
+    // Ordena as linhas do TOPO para a BASE da página (Y decrescente)
+    linhasMap.sort((a, b) => b.y - a.y);
+
+    // Para cada linha, ordena da ESQUERDA para a DIREITA (X crescente)
+    for (const linha of linhasMap) {
+      linha.items.sort((a, b) => a.x - b.x);
+      
+      let textoLinha = linha.items.map(it => it.str).join(' ');
+      
+      // Junta fragmentos de fórmulas químicas com subscritos (ex: "( H NO 3 )" -> "(HNO3)", "( NH 4 OH )" -> "(NH4OH)")
+      textoLinha = textoLinha
+        .replace(/\(\s*([A-Za-z]+)\s*(\d+)\s*([A-Za-z]*)\s*\)/g, '($1$2$3)')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+      if (textoLinha) {
+        textoTotal += textoLinha + '\n';
+      }
+    }
   }
 
   return textoTotal;
@@ -104,8 +140,7 @@ async function extrairTextoDeUrlPdf(url: string): Promise<string> {
 
 /**
  * ALGORITMO DE FATIAMENTO POR ÍNDICES:
- * Localiza todas as ocorrências de "Nº 1", "Nº 2"... "Nº 12" e fatia o texto em pedaços exatos.
- * Garante 100% de captura de TODOS os itens sem pular nenhum número!
+ * Localiza todas as ocorrências de "Nº 1", "Nº 2"... e fatia a tabela linha por linha.
  */
 function extrairReagentesDasSecoesBancada(texto: string): ReagenteItem[] {
   const reagentesEncontrados: ReagenteItem[] = [];
@@ -148,7 +183,7 @@ function extrairReagentesDasSecoesBancada(texto: string): ReagenteItem[] {
     const matchQtd = chunk.match(/(\d+(?:[.,]\d+)?\s*(?:mL|ml|L|g|mg|gotas|tubos|frascos|litro|litros|unidades|unidade|caixa|pacote|frasco|frascos))\b/i);
     const quantidade = matchQtd ? matchQtd[1].trim() : 'Conforme bancada';
 
-    // Extrai a concentração estrita (ex: "1%", "5%", "0,1 M", "1 M", "0,1 N")
+    // Extrai a concentração estrita (ex: "10%", "50%", "1%", "2%", "0,1 M", "1 M", "0,1 N")
     const matchConc = chunk.match(/(\d+(?:[.,]\d+)?\s*(?:M\b|mol\/L|N\b|%))/i);
     const concentracao = matchConc ? matchConc[1].trim() : undefined;
 
@@ -188,7 +223,7 @@ function extrairReagentesDasSecoesBancada(texto: string): ReagenteItem[] {
     }
   }
 
-  // Ordena numericamente por "Nº 1", "Nº 2", "Nº 3"... "Nº 12"
+  // Ordena numericamente por "Nº 1", "Nº 2", "Nº 3"... "Nº 9"
   return reagentesEncontrados.sort((a, b) => {
     const numA = parseInt((a.nome.match(/Nº\s*(\d+)/i) || [])[1] || '0', 10);
     const numB = parseInt((b.nome.match(/Nº\s*(\d+)/i) || [])[1] || '0', 10);
