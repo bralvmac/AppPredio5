@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { X, FlaskConical, Check, Copy, MessageCircle, Loader2, AlertCircle, Beaker, ShieldAlert, Sparkles } from 'lucide-react';
+import { X, FlaskConical, Check, Copy, MessageCircle, AlertCircle, Beaker, Sparkles, Building2, UserCheck } from 'lucide-react';
 import { Roteiro } from '../types/roteiro';
-import { analisarReagentesDoRoteiro, ResultadoAnaliseReagentes, ReagenteItem } from '../lib/reagentAnalyzer';
+import { analisarReagentesDoRoteiro, ResultadoAnaliseReagentes } from '../lib/reagentAnalyzer';
 
 interface ReagentesModalProps {
   roteiro: Roteiro | null;
@@ -21,13 +21,13 @@ export const ReagentesModal: React.FC<ReagentesModalProps> = ({ roteiro, onClose
       setAnalisando(true);
       setResultado(null);
 
-      // Simula um pequeno delay realista de IA/processamento para o usuário ver a análise rodando
+      // Simula tempo de leitura e isolamento das seções de bancada no PDF
       const res = await analisarReagentesDoRoteiro(roteiro!);
       
       setTimeout(() => {
         setResultado(res);
         setAnalisando(false);
-      }, 600);
+      }, 500);
     }
 
     executarAnalise();
@@ -38,7 +38,7 @@ export const ReagentesModal: React.FC<ReagentesModalProps> = ({ roteiro, onClose
   const handleCopiarTexto = () => {
     if (!resultado || resultado.reagentes.length === 0) return;
 
-    let texto = `🧪 *LISTA DE REAGENTES NECESSÁRIOS PARA AULA PRÁTICA*\n`;
+    let texto = `🧪 *REAGENTES DAS SEÇÕES DE BANCADA DA AULA PRÁTICA*\n`;
     texto += `📌 *Roteiro:* ${roteiro.titulo}\n`;
     texto += `🔬 *Tema:* ${roteiro.tema}\n`;
     texto += `📚 *Unidade Curricular:* ${roteiro.disciplina}\n`;
@@ -47,8 +47,9 @@ export const ReagentesModal: React.FC<ReagentesModalProps> = ({ roteiro, onClose
     resultado.reagentes.forEach((r, idx) => {
       texto += `${idx + 1}. *${r.nome}*\n`;
       texto += `   • Quantidade: ${r.quantidade}\n`;
+      if (r.origemBancada) texto += `   • Local: ${r.origemBancada}\n`;
       if (r.concentracao) texto += `   • Concentração: ${r.concentracao}\n`;
-      if (r.observacoes) texto += `   • Observações: ${r.observacoes}\n`;
+      if (r.observacoes) texto += `   • Obs: ${r.observacoes}\n`;
       texto += `\n`;
     });
 
@@ -64,13 +65,13 @@ export const ReagentesModal: React.FC<ReagentesModalProps> = ({ roteiro, onClose
     texto += `📄 *Roteiro:* ${roteiro.titulo}\n`;
     texto += `🔬 *Tema:* ${roteiro.tema}\n`;
     texto += `📚 *Disciplina:* ${roteiro.disciplina}\n\n`;
-    texto += `*LISTA DE REAGENTES SOLICITADOS:*\n`;
+    texto += `*ITENS EXTRAÍDOS DA DISPONIBILIZAÇÃO:* \n`;
 
     resultado.reagentes.forEach((r, idx) => {
       texto += `\n${idx + 1}️⃣ *${r.nome}*\n`;
-      texto += `🧪 Qtd: ${r.quantidade}\n`;
+      texto += `🧪 Quantidade: ${r.quantidade}\n`;
+      if (r.origemBancada) texto += `📍 ${r.origemBancada}\n`;
       if (r.concentracao) texto += `⚗️ Conc: ${r.concentracao}\n`;
-      if (r.observacoes) texto += `💡 Obs: ${r.observacoes}\n`;
     });
 
     const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(texto)}`;
@@ -103,10 +104,10 @@ export const ReagentesModal: React.FC<ReagentesModalProps> = ({ roteiro, onClose
             </div>
             <div className="min-w-0">
               <h2 className="text-sm sm:text-base font-black truncate" style={{ color: isDark ? '#ffffff' : '#020617' }}>
-                Reagentes e Soluções da Aula Prática
+                Reagentes das Bancadas da Aula Prática
               </h2>
               <p className="text-xs font-semibold truncate" style={{ color: isDark ? '#94a3b8' : '#475569' }}>
-                Análise inteligente do roteiro: <span className="font-bold text-amber-600 dark:text-amber-400">{roteiro.titulo}</span>
+                Análise das seções <span className="font-bold text-amber-600 dark:text-amber-400">Disponibilização - Bancada do Aluno / Apoio</span>
               </p>
             </div>
           </div>
@@ -127,7 +128,7 @@ export const ReagentesModal: React.FC<ReagentesModalProps> = ({ roteiro, onClose
         {/* Corpo do Modal */}
         <div className="p-5 space-y-5 max-h-[75vh] overflow-y-auto">
           
-          {/* Estado 1: Analisando */}
+          {/* Estado 1: Analisando as Seções de Bancada */}
           {analisando && (
             <div className="flex flex-col items-center justify-center py-12 space-y-4 text-center">
               <div className="relative">
@@ -136,10 +137,10 @@ export const ReagentesModal: React.FC<ReagentesModalProps> = ({ roteiro, onClose
               </div>
               <div>
                 <h3 className="text-sm font-extrabold" style={{ color: isDark ? '#ffffff' : '#020617' }}>
-                  Analisando o Roteiro...
+                  Analisando Seções de Bancada no Roteiro...
                 </h3>
                 <p className="text-xs font-medium max-w-sm mt-1" style={{ color: isDark ? '#94a3b8' : '#64748b' }}>
-                  Identificando insumos, reagentes químicos, soluções e concentrações solicitadas para esta aula.
+                  Isolando as seções "Disponibilização - Bancada do Aluno" e "Disponibilização - Bancada de Apoio" para identificar reagentes e quantidades.
                 </p>
               </div>
             </div>
@@ -168,7 +169,7 @@ export const ReagentesModal: React.FC<ReagentesModalProps> = ({ roteiro, onClose
                 )}
                 <div>
                   <h4 className="font-extrabold text-xs">
-                    {resultado.requerReagentes ? 'Preparo de Reagentes Identificado' : 'Aula sem necessidade de Reagentes'}
+                    {resultado.requerReagentes ? 'Reagentes Encontrados nas Seções de Bancada' : 'Nenhum Reagente Solicitado nas Bancadas'}
                   </h4>
                   <p className="font-medium mt-0.5 leading-relaxed">
                     {resultado.resumoGeral}
@@ -176,15 +177,15 @@ export const ReagentesModal: React.FC<ReagentesModalProps> = ({ roteiro, onClose
                 </div>
               </div>
 
-              {/* Tabela / Lista de Reagentes Encontrados */}
+              {/* Tabela / Lista de Reagentes Encontrados nas Seções de Bancada */}
               {resultado.requerReagentes && resultado.reagentes.length > 0 ? (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-black uppercase tracking-wider" style={{ color: isDark ? '#cbd5e1' : '#020617' }}>
-                      Reagentes & Soluções Solicitadas ({resultado.reagentes.length})
+                      Reagentes das Bancadas ({resultado.reagentes.length})
                     </span>
-                    <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                      <Check className="w-3.5 h-3.5" /> Quantidades para o laboratório
+                    <span className="text-[11px] font-bold text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                      <Check className="w-3.5 h-3.5" /> Focado em Bancada do Aluno / Apoio
                     </span>
                   </div>
 
@@ -204,17 +205,33 @@ export const ReagentesModal: React.FC<ReagentesModalProps> = ({ roteiro, onClose
                               {idx + 1}. {item.nome}
                             </span>
 
-                            {item.categoria && (
+                            {/* Badge da Origem da Bancada (Aluno x Apoio) */}
+                            {item.origemBancada && (
+                              <span 
+                                className="px-2 py-0.5 rounded-md text-[10px] font-extrabold border flex items-center gap-1"
+                                style={
+                                  item.origemBancada === 'Bancada do Aluno'
+                                    ? { backgroundColor: '#d1fae5', color: '#065f46', borderColor: '#a7f3d0' }
+                                    : { backgroundColor: '#e0e7ff', color: '#3730a3', borderColor: '#c7d2fe' }
+                                }
+                              >
+                                {item.origemBancada === 'Bancada do Aluno' ? (
+                                  <UserCheck className="w-3 h-3" />
+                                ) : (
+                                  <Building2 className="w-3 h-3" />
+                                )}
+                                {item.origemBancada}
+                              </span>
+                            )}
+
+                            {/* Categoria do Composto */}
+                            {item.categoria && item.categoria !== 'Geral' && (
                               <span 
                                 className="px-2 py-0.5 rounded-md text-[10px] font-extrabold border"
                                 style={
                                   item.categoria === 'Ácido / Base'
                                     ? { backgroundColor: '#ffe4e6', color: '#be123c', borderColor: '#fecdd3' }
-                                    : item.categoria === 'Indicador / Corante'
-                                      ? { backgroundColor: '#fef3c7', color: '#78350f', borderColor: '#fde68a' }
-                                      : item.categoria === 'Meio de Cultura'
-                                        ? { backgroundColor: '#d1fae5', color: '#065f46', borderColor: '#a7f3d0' }
-                                        : { backgroundColor: '#e0e7ff', color: '#3730a3', borderColor: '#c7d2fe' }
+                                    : { backgroundColor: '#fef3c7', color: '#78350f', borderColor: '#fde68a' }
                                 }
                               >
                                 {item.categoria}
@@ -229,11 +246,11 @@ export const ReagentesModal: React.FC<ReagentesModalProps> = ({ roteiro, onClose
                           )}
                         </div>
 
-                        {/* Quantidade e Concentração */}
+                        {/* Quantidade Solicitada na Tabela */}
                         <div className="flex flex-col sm:items-end gap-0.5 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-200 dark:border-slate-800 w-full sm:w-auto">
                           <div className="flex items-center gap-1.5 text-xs font-black text-amber-600 dark:text-amber-400">
                             <Beaker className="w-3.5 h-3.5" />
-                            <span>{item.quantidade}</span>
+                            <span>Quant: {item.quantidade}</span>
                           </div>
 
                           {item.concentracao && (
@@ -262,7 +279,7 @@ export const ReagentesModal: React.FC<ReagentesModalProps> = ({ roteiro, onClose
             }}
           >
             <span className="text-xs font-bold" style={{ color: isDark ? '#94a3b8' : '#64748b' }}>
-              Utilize a lista para solicitação de insumos no laboratório
+              Substâncias extraídas das seções de Bancada do Aluno / Apoio
             </span>
 
             <div className="flex items-center gap-2 ml-auto">
