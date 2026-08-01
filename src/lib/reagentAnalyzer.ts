@@ -44,7 +44,7 @@ export async function analisarReagentesDoRoteiro(roteiro: Roteiro): Promise<Resu
         requerReagentes: true,
         roteiroTitulo: roteiro.titulo,
         reagentes: extraidos,
-        resumoGeral: `Foram identificados ${extraidos.length} reagente(s) e solução(ões) com suas respectivas quantidades nas bancadas.`
+        resumoGeral: `Foram identificados ${extraidos.length} reagente(s) e solução(ões) nas seções de bancada.`
       };
     }
   }
@@ -104,28 +104,31 @@ async function extrairTextoDeUrlPdf(url: string): Promise<string> {
 
 /**
  * Algoritmo determinístico por blocos "Nº 1", "Nº 2", etc.
- * Garante captura de TODOS os itens numerados das tabelas USF sem pular o Nº 1.
+ * Interrompe no final da tabela e não captura seções posteriores (CONSIDERAÇÕES GERAIS, Capela, POPs).
  */
 function extrairReagentesDasSecoesBancada(texto: string): ReagenteItem[] {
   const reagentesEncontrados: ReagenteItem[] = [];
 
-  // Normaliza o texto para busca uniforme de numerações (ex: "Nº 1", "Nº 2", "N° 1", "Nº1")
+  // Normaliza o texto para busca uniforme de numerações
   const textoNormalizado = texto.replace(/N[º°]\s*(\d+)/gi, 'Nº $1');
 
-  // 1. ISOLAMENTO POR BLOCOS NUMERADOS: Captura cada bloco iniciando por "Nº 1", "Nº 2", "Nº 3"...
-  const regexBlocoNumerado = /(Nº\s*\d+\s*[–-][\s\S]*?)(?=(?:Nº\s*\d+|•\s*Materiais|DISPONIBILIZA[ÇC][ÃA]O|PROP[ÓO]SITO|PROCEDIMENTO|$))/gi;
+  // 1. ISOLAMENTO POR BLOCOS NUMERADOS: Interrompe exatamente no início do próximo Nº ou seções finais da página
+  const regexBlocoNumerado = /(Nº\s*\d+\s*[–-][\s\S]*?)(?=(?:Nº\s*\d+|•|CONSIDERA[ÇC][ÕO]ES|Acesso\s+aos|Banho\s+Maria|Capela|DISPONIBILIZA[ÇC][ÃA]O|PROP[ÓO]SITO|PROCEDIMENTO|$))/gi;
 
   let matchBloco: RegExpExecArray | null;
 
   while ((matchBloco = regexBlocoNumerado.exec(textoNormalizado)) !== null) {
-    const blocoTexto = matchBloco[1].trim();
+    let blocoTexto = matchBloco[1].trim();
+
+    // Corta qualquer resíduo de seções posteriores como "CONSIDERAÇÕES GERAIS", "Banho Maria", "Capela", "POPs"
+    blocoTexto = blocoTexto.split(/\s+(?:•|CONSIDERA[ÇC][ÕO]ES\s+GERAIS|Acesso\s+aos\s+POPs|Banho\s+Maria|Capela|Bancada\s+Lateral)/i)[0].trim();
 
     // Procura a quantidade no formato (ex: "10 ml", "30 ml", "50 mL", "5 g")
     const matchQtd = blocoTexto.match(/(\d+(?:[.,]\d+)?\s*(?:mL|ml|L|g|mg|gotas|tubos|frascos))\b/i);
     const quantidade = matchQtd ? matchQtd[1].trim() : 'Conforme bancada';
 
-    // Procura a concentração no formato (ex: "0,1 M", "1 M", "70%", "0,1 N")
-    const matchConc = blocoTexto.match(/(\d+(?:[.,]\d+)?\s*(?:M|mol\/L|N|%))/i);
+    // Procura a concentração estrita (palavra inteira M, N, %, mol/L - evitando confundir 'ml' com 'M')
+    const matchConc = blocoTexto.match(/(\d+(?:[.,]\d+)?\s*(?:M\b|mol\/L|N\b|%))/i);
     const concentracao = matchConc ? matchConc[1].trim() : undefined;
 
     // Extrai o nome do reagente limpando a quantidade e concentração
@@ -163,7 +166,7 @@ function extrairReagentesDasSecoesBancada(texto: string): ReagenteItem[] {
     }
   }
 
-  // Se encontrou os reagentes numerados das tabelas USF, retorna a lista completa (Nº 1, Nº 2, etc.)!
+  // Se encontrou os reagentes numerados das tabelas USF, retorna a lista completa (Nº 1, Nº 2... Nº 12, etc.)!
   if (reagentesEncontrados.length > 0) {
     return reagentesEncontrados;
   }
@@ -181,7 +184,7 @@ function extrairReagentesDasSecoesBancada(texto: string): ReagenteItem[] {
       const nome = matchQtd[1].trim();
       const quantidade = matchQtd[2].trim();
 
-      const matchConc = nome.match(/(\d+(?:[.,]\d+)?\s*(?:M|mol\/L|N|%))/i);
+      const matchConc = nome.match(/(\d+(?:[.,]\d+)?\s*(?:M\b|mol\/L|N\b|%))/i);
       const concentracao = matchConc ? matchConc[1] : undefined;
 
       let nomeLimpo = nome;
