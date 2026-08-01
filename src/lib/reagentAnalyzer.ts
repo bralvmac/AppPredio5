@@ -92,7 +92,6 @@ async function extrairTextoDeUrlPdf(url: string): Promise<string> {
     const page = await pdf.getPage(i);
     const content = await page.getTextContent();
     
-    // Concatena texto de forma estruturada
     let linhaAtual = '';
     for (const item of content.items as any[]) {
       linhaAtual += item.str + ' ';
@@ -104,66 +103,77 @@ async function extrairTextoDeUrlPdf(url: string): Promise<string> {
 }
 
 /**
- * Algoritmo refinado para extrair APENAS reagentes e suas quantidades exatas
- * a partir das tabelas "DISPONIBILIZAÇÃO - BANCADA DO ALUNO / APOIO"
+ * Algoritmo determinístico por blocos "Nº 1", "Nº 2", etc.
+ * Garante captura de TODOS os itens numerados das tabelas USF sem pular o Nº 1.
  */
 function extrairReagentesDasSecoesBancada(texto: string): ReagenteItem[] {
   const reagentesEncontrados: ReagenteItem[] = [];
 
-  // Limpa repetições de cabeçalhos de tabela USF que poluem o fluxo de texto
-  const textoLimpo = texto.replace(/•?\s*Materiais\s*•?\s*Reagentes\s*•?\s*Equipamentos\s*Quant\.?/gi, ' ');
+  // Normaliza o texto para busca uniforme de numerações (ex: "Nº 1", "Nº 2", "N° 1", "Nº1")
+  const textoNormalizado = texto.replace(/N[º°]\s*(\d+)/gi, 'Nº $1');
 
-  // 1. REGEX PRIMÁRIA: Captura itens numerados das tabelas de reagentes (ex: "Nº 1 – Solução e Alaranjado de Metila 0,1 M 10 ml", "Nº 2 – Ácido Lático 0,1 M 30 ml")
-  const regexItemNumerado = /(Nº\s*\d+\s*[–-]\s*[^Nº\n\r]+?)\s+(\d+(?:[.,]\d+)?\s*(?:mL|ml|L|g|mg|gotas|tubos|frascos))\b/gi;
+  // 1. ISOLAMENTO POR BLOCOS NUMERADOS: Captura cada bloco iniciando por "Nº 1", "Nº 2", "Nº 3"...
+  const regexBlocoNumerado = /(Nº\s*\d+\s*[–-][\s\S]*?)(?=(?:Nº\s*\d+|•\s*Materiais|DISPONIBILIZA[ÇC][ÃA]O|PROP[ÓO]SITO|PROCEDIMENTO|$))/gi;
 
-  let matchNumerado: RegExpExecArray | null;
+  let matchBloco: RegExpExecArray | null;
 
-  while ((matchNumerado = regexItemNumerado.exec(textoLimpo)) !== null) {
-    const todoOItem = matchNumerado[1].trim(); // Ex: "Nº 1 – Solução e Alaranjado de Metila 0,1 M"
-    const quantidade = matchNumerado[2].trim(); // Ex: "10 ml"
+  while ((matchBloco = regexBlocoNumerado.exec(textoNormalizado)) !== null) {
+    const blocoTexto = matchBloco[1].trim();
 
-    // Extrai a concentração (ex: "0,1 M", "1 M", "70%", "0,1 N")
-    const matchConc = todoOItem.match(/(\d+(?:[.,]\d+)?\s*(?:M|mol\/L|N|%))/i);
-    const concentracao = matchConc ? matchConc[1] : undefined;
+    // Procura a quantidade no formato (ex: "10 ml", "30 ml", "50 mL", "5 g")
+    const matchQtd = blocoTexto.match(/(\d+(?:[.,]\d+)?\s*(?:mL|ml|L|g|mg|gotas|tubos|frascos))\b/i);
+    const quantidade = matchQtd ? matchQtd[1].trim() : 'Conforme bancada';
 
-    // Remove a concentração do nome para exibição limpa
-    let nomeFormatado = todoOItem;
+    // Procura a concentração no formato (ex: "0,1 M", "1 M", "70%", "0,1 N")
+    const matchConc = blocoTexto.match(/(\d+(?:[.,]\d+)?\s*(?:M|mol\/L|N|%))/i);
+    const concentracao = matchConc ? matchConc[1].trim() : undefined;
+
+    // Extrai o nome do reagente limpando a quantidade e concentração
+    let nomeLimpo = blocoTexto;
+    if (matchQtd) {
+      nomeLimpo = nomeLimpo.replace(matchQtd[0], '');
+    }
     if (concentracao) {
-      nomeFormatado = nomeFormatado.replace(concentracao, '').replace(/\s+/g, ' ').trim();
+      nomeLimpo = nomeLimpo.replace(concentracao, '');
     }
 
+    nomeLimpo = nomeLimpo
+      .replace(/•?\s*Materiais\s*•?\s*Reagentes\s*•?\s*Equipamentos\s*Quant\.?/gi, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+
     // Identifica se pertence à Bancada do Aluno ou Bancada de Apoio
-    const indIndex = matchNumerado.index;
-    const trechoAnterior = textoLimpo.substring(Math.max(0, indIndex - 400), indIndex);
+    const indIndex = matchBloco.index;
+    const trechoAnterior = textoNormalizado.substring(Math.max(0, indIndex - 400), indIndex);
     const origemBancada: ReagenteItem['origemBancada'] = /APOIO/i.test(trechoAnterior) ? 'Bancada de Apoio' : 'Bancada do Aluno';
 
     let categoria: ReagenteItem['categoria'] = 'Solução Reativa';
-    if (/ácido|hidr[óo]xido|hcl|naoh|h2so4/i.test(nomeFormatado)) categoria = 'Ácido / Base';
-    else if (/indicador|lugol|fenolftale[íi]na|metileno|alaranjado/i.test(nomeFormatado)) categoria = 'Indicador / Corante';
+    if (/ácido|hidr[óo]xido|hcl|naoh|h2so4/i.test(nomeLimpo)) categoria = 'Ácido / Base';
+    else if (/indicador|lugol|fenolftale[íi]na|metileno|alaranjado/i.test(nomeLimpo)) categoria = 'Indicador / Corante';
 
-    reagentesEncontrados.push({
-      nome: nomeFormatado,
-      quantidade: quantidade,
-      concentracao: concentracao,
-      origemBancada: origemBancada,
-      categoria: categoria,
-      observacoes: `Disponibilizado na ${origemBancada}`
-    });
+    if (nomeLimpo.length > 3 && !reagentesEncontrados.some(r => r.nome.toLowerCase() === nomeLimpo.toLowerCase())) {
+      reagentesEncontrados.push({
+        nome: nomeLimpo,
+        quantidade: quantidade,
+        concentracao: concentracao,
+        origemBancada: origemBancada,
+        categoria: categoria,
+        observacoes: `Disponibilizado na ${origemBancada}`
+      });
+    }
   }
 
-  // Se encontrou os reagentes numerados das tabelas USF, retorna diretamente sem incluir vidrarias!
+  // Se encontrou os reagentes numerados das tabelas USF, retorna a lista completa (Nº 1, Nº 2, etc.)!
   if (reagentesEncontrados.length > 0) {
     return reagentesEncontrados;
   }
 
-  // 2. REGEX SECUNDÁRIA: Caso não haja numeração "Nº 1", busca por substâncias específicas seguidas de volumes (mL, L, g)
+  // 2. REGEX DE RESERVA: Caso o PDF não use o prefixo "Nº 1", busca por soluções isoladas seguidas de volume
   const regexSolucaoVolume = /(?:solu[çc][ãa]o|ácido|hidr[óo]xido|álcool|lugol|fenolftale[íi]na|alaranjado|água destilada|ágar|agar|caldo)\s+[^.\n\r]*?\s+(\d+(?:[.,]\d+)?\s*(?:mL|ml|L|g|mg))\b/gi;
   let matchSol: RegExpExecArray | null;
 
-  while ((matchSol = regexSolucaoVolume.exec(textoLimpo)) !== null) {
+  while ((matchSol = regexSolucaoVolume.exec(textoNormalizado)) !== null) {
     const linha = matchSol[0].trim();
-    
-    // Ignora vidrarias e equipamentos físicos
     if (eApenasEquipamentoFisico(linha)) continue;
 
     const matchQtd = linha.match(/(.*?)\s+(\d+(?:[.,]\d+)?\s*(?:mL|ml|L|g|mg))\s*$/i);
