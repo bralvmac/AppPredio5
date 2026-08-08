@@ -20,9 +20,17 @@ export interface ResultadoAnaliseReagentes {
 }
 
 /**
- * Filtro de exclusão de vidrarias, utensílios e equipamentos físicos
+ * Filtro estrito para descartar cabeçalhos de tabelas e vidrarias/equipamentos
  */
-function eApenasEquipamentoFisico(linha: string): boolean {
+function eLinhaDescartavelOuCabecalho(linha: string): boolean {
+  if (!linha || linha.length < 2) return true;
+
+  // 1. Descarta cabeçalhos da tabela USF (ex: "• Materiais • Reagentes • Equipamentos Quant.")
+  if (/•?\s*Materiais\s*•?\s*Reagentes\s*•?\s*Equipamentos/i.test(linha)) return true;
+  if (/^(?:materiais|reagentes|equipamentos|quant\.?|quantidade|\bullet)$/i.test(linha)) return true;
+  if (/^DISPONIBILIZA[ÇC][ÃA]O/i.test(linha)) return true;
+
+  // 2. Descarta vidrarias e utensílios sem substâncias químicas
   const equipamentosFisicos = [
     /bal[ãa]o volum[ée]trico/i, /b[ée]quer/i, /erlenmeyer/i, /funil/i,
     /bast[ãa]o de vidro/i, /pipeta/i, /proveta/i, /tubo[s]? de ensaio/i,
@@ -33,8 +41,7 @@ function eApenasEquipamentoFisico(linha: string): boolean {
     /estante/i, /tesoura/i, /bisturi/i, /al[çc]a/i, /esp[áa]tula/i, /suporte/i
   ];
 
-  // Só é equipamento físico puro se NÃO tiver termos explícitos de reagente/soluto
-  const temReagenteOuQuimico = /soluto|solu[çc][ãa]o|ácido|hidr[óo]xido|reagente|indicador|lugol|alaranjado|cloreto|sulfato|glicose|amido|ninhidrina|benedict|biureto|naoh|hcl|h2so4|hno3|nacl|cuso4/i.test(linha);
+  const temReagenteOuQuimico = /solutos?:|solu[çc][ãa]o|ácido|hidr[óo]xido|reativo|indicador|lugol|alaranjado|cloreto|sulfato|glicose|amido|ninhidrina|benedict|biureto|naoh|hcl|h2so4|hno3|nacl|cuso4/i.test(linha);
 
   return equipamentosFisicos.some(regex => regex.test(linha)) && !temReagenteOuQuimico;
 }
@@ -50,7 +57,7 @@ function eReagenteOuQuimicoValido(nome: string): boolean {
     /metanol/i, /cloreto/i, /sulfato/i, /nitrato/i, /acetato/i, /hipoclorito/i, /ninhidrina/i,
     /lugol/i, /alaranjado/i, /benedict/i, /biureto/i, /tollens/i, /barfoed/i, /fehling/i,
     /naoh/i, /hcl/i, /h2so4/i, /hno3/i, /nh4oh/i, /nacl/i, /cuso4/i, /[áa]gua destilada/i,
-    /soro/i, /leishman/i, /giemsa/i, /formol/i, /reagente/i, /alfa-naftol/i, /salina/i
+    /soro/i, /leishman/i, /giemsa/i, /formol/i, /alfa-naftol/i, /salina/i
   ];
 
   return palavrasChaveQuimicas.some(regex => regex.test(nome));
@@ -174,7 +181,6 @@ async function extrairTextoDeUrlPdf(url: string): Promise<string> {
 function extrairReagentesDasSecoesBancada(texto: string): ReagenteItem[] {
   const reagentesEncontrados: ReagenteItem[] = [];
 
-  // Mapeia os blocos exatos das duas seções de bancada no PDF
   const secoes = [
     { regex: /DISPONIBILIZA[ÇC][ÃA]O\s*[\s–-]\s*BANCADA\s+DO\s+ALUNO([\s\S]*?)(?=DISPONIBILIZA[ÇC][ÃA]O\s*[\s–-]\s*BANCADA\s+DE\s+APOIO|PROCEDIMENTOS?|COMPET[ÊE]NCIAS|OBJETIVOS|CONSIDERA[ÇC][ÕO]ES|$)/i, origem: 'Bancada do Aluno' as const },
     { regex: /DISPONIBILIZA[ÇC][ÃA]O\s*[\s–-]\s*BANCADA\s+DE\s+APOIO([\s\S]*?)(?=DISPONIBILIZA[ÇC][ÃA]O|PROCEDIMENTOS?|COMPET[ÊE]NCIAS|OBJETIVOS|CONSIDERA[ÇC][ÕO]ES|$)/i, origem: 'Bancada de Apoio' as const }
@@ -191,9 +197,8 @@ function extrairReagentesDasSecoesBancada(texto: string): ReagenteItem[] {
       linha = linha.trim();
       if (!linha || linha.length < 3) continue;
 
-      // Descarta linhas de cabeçalho da tabela ou vidrarias/utensílios
-      if (/^(?:materiais|reagentes|equipamentos|quant\.?|quantidade|\bullet)$/i.test(linha)) continue;
-      if (eApenasEquipamentoFisico(linha)) continue;
+      // Descarta explicitamente linhas de cabeçalho e vidrarias sem reagentes
+      if (eLinhaDescartavelOuCabecalho(linha)) continue;
 
       // CASO 1: Formato com numeração (ex: "Nº 1 – Ácido Nítrico 50 ml")
       if (/N[º°o]\s*\d+/i.test(linha)) {
@@ -206,8 +211,8 @@ function extrairReagentesDasSecoesBancada(texto: string): ReagenteItem[] {
         continue;
       }
 
-      // CASO 2: Formato com "Solutos:", "Reagentes:" ou nomes diretos de químicos (ex: "Solutos: Cloreto de Sódio (NaCl) e Sulfato de cobre (CuSO4) 1")
-      if (/solutos?:|reagentes?:|solu[çc][ãa]o\s+de/i.test(linha) || eReagenteOuQuimicoValido(linha)) {
+      // CASO 2: Formato com "Solutos:", "Reagentes:" ou nomes de químicos
+      if ((/solutos?:|solu[çc][ãa]o\s+de/i.test(linha) || eReagenteOuQuimicoValido(linha)) && !eLinhaDescartavelOuCabecalho(linha)) {
         const extraidos = extrairLinhaSolutosOuQuimicos(linha, secao.origem);
         extraidos.forEach(it => {
           if (!reagentesEncontrados.some(r => r.nome.toLowerCase() === it.nome.toLowerCase())) {
@@ -218,7 +223,7 @@ function extrairReagentesDasSecoesBancada(texto: string): ReagenteItem[] {
     }
   }
 
-  // Se a tabela tiver numerações "Nº 1", "Nº 2", ordena numericamente
+  // Ordena numericamente caso haja "Nº 1", "Nº 2"...
   return reagentesEncontrados.sort((a, b) => {
     const numA = parseInt((a.nome.match(/Nº\s*(\d+)/i) || [])[1] || '0', 10);
     const numB = parseInt((b.nome.match(/Nº\s*(\d+)/i) || [])[1] || '0', 10);
@@ -233,7 +238,6 @@ function extrairItemNumerado(linha: string, origemBancada: ReagenteItem['origemB
   const matchQtd = linha.match(/(\d+(?:[.,]\d+)?\s*(?:mL|ml|L|g|mg|gotas|tubos|frascos|litro|litros|unidades|unidade|caixa|pacote|frasco|frascos))\b/i);
   let quantidade = matchQtd ? matchQtd[1].trim() : 'Conforme bancada';
 
-  // Se a quantidade no final da coluna da tabela for um simples inteiro (ex: "... 1" ou "... 2")
   if (!matchQtd) {
     const matchNumFinal = linha.match(/\s+(\d+)\s*$/);
     if (matchNumFinal) {
@@ -272,7 +276,6 @@ function extrairItemNumerado(linha: string, origemBancada: ReagenteItem['origemB
  * Processa linhas do tipo "Solutos: Cloreto de Sódio (NaCl) e Sulfato de cobre (CuSO4) 1"
  */
 function extrairLinhaSolutosOuQuimicos(linha: string, origemBancada: ReagenteItem['origemBancada']): ReagenteItem[] {
-  // Extrai a quantidade numérica da coluna final da tabela (ex: "... 1" ou "... 10 mL")
   let quantidade = 'Conforme bancada';
   const matchQtd = linha.match(/(\d+(?:[.,]\d+)?\s*(?:mL|ml|L|g|mg|gotas|tubos|frascos|litro|litros|unidades|unidade|caixa|pacote|frasco|frascos))\b/i);
 
@@ -287,16 +290,13 @@ function extrairLinhaSolutosOuQuimicos(linha: string, origemBancada: ReagenteIte
     }
   }
 
-  // Limpa o prefixo "Solutos:" ou "Reagentes:"
   let textoSolutos = linha.replace(/^(?:solutos?|reagentes?)\s*:\s*/i, '').trim();
-
-  // Separa múltiplos reagentes descritos na mesma linha por " e " ou ","
   const partes = textoSolutos.split(/\s+e\s+|,\s*/i);
   const reagentes: ReagenteItem[] = [];
 
   for (const parte of partes) {
     const nomeLimpo = parte.trim();
-    if (nomeLimpo.length > 2 && eReagenteOuQuimicoValido(nomeLimpo) && !eApenasEquipamentoFisico(nomeLimpo)) {
+    if (nomeLimpo.length > 2 && eReagenteOuQuimicoValido(nomeLimpo) && !eLinhaDescartavelOuCabecalho(nomeLimpo)) {
       const matchConc = nomeLimpo.match(/(\d+(?:[.,]\d+)?\s*(?:M\b|mol\/L|N\b|%))/i);
       const concentracao = matchConc ? matchConc[1].trim() : undefined;
 
