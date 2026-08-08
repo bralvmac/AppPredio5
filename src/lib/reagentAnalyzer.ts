@@ -20,6 +20,39 @@ export interface ResultadoAnaliseReagentes {
 }
 
 /**
+ * Verificação estrita se uma linha/string é uma instrução procedimental (e NÃO um reagente)
+ */
+function eFraseInstrucaoOuProcedimento(texto: string): boolean {
+  const termosInstrucao = [
+    /dever[áa]/i, /espalhar/i, /apertar/i, /vizinho/i, /palmas? da[s]? m[ãa]o[s]?/i,
+    /transmit/i, /experimento/i, /cadeia epidemiol[óo]gica/i, /semear/i, /incub/i,
+    /estufa/i, /quadrante/i, /anotar/i, /descart/i, /coleta/i, /colher/i, /misturar/i,
+    /observad/i, /quadro/i, /leitura/i, /crescimento/i, /aluno/i, /grupo/i, /dupla/i,
+    /etapa/i, /passo/i, /procedimento/i, /seguir/i, /conforme/i, /realizar/i, /lavar/i
+  ];
+
+  return termosInstrucao.some(regex => regex.test(texto));
+}
+
+/**
+ * Validação se o texto refere-se genuinamente a uma substância química, solução ou insumo de bancada
+ */
+function eReagenteOuQuimicoValido(nome: string): boolean {
+  // Palavras-chave características de reagentes químicos e soluções
+  const palavrasChaveQuimicas = [
+    /solu[çc][ãa]o/i, /[áa]cido/i, /hidr[óo]xido/i, /reativo/i, /[áa]gar/i, /agar/i, /caldo/i,
+    /glicose/i, /amido/i, /lactose/i, /sacarose/i, /fructose/i, /prote[íi]na/i, /albumina/i,
+    /corante/i, /indicador/i, /tamp[ãa]o/i, /[áa]lcool/i, /etanol/i, /metanol/i, /cloreto/i,
+    /sulfato/i, /nitrato/i, /acetato/i, /hipoclorito/i, /ninhidrina/i, /lugol/i, /alaranjado/i,
+    /benedict/i, /biureto/i, /tollens/i, /barfoed/i, /fehling/i, /naoh/i, /hcl/i, /h2so4/i,
+    /hno3/i, /nh4oh/i, /[áa]gua destilada/i, /[áa]gua deionizada/i, /soro/i, /leishman/i,
+    /giemsa/i, /formol/i, /reagente/i, /inulina/i, /ureia/i, /alfa-naftol/i, /salina/i
+  ];
+
+  return palavrasChaveQuimicas.some(regex => regex.test(nome));
+}
+
+/**
  * Analisa o roteiro de aula prática buscando EXCLUSIVAMENTE nas seções
  * "DISPONIBILIZAÇÃO - BANCADA DO ALUNO" e "DISPONIBILIZAÇÃO - BANCADA DE APOIO"
  */
@@ -44,7 +77,7 @@ export async function analisarReagentesDoRoteiro(roteiro: Roteiro): Promise<Resu
         requerReagentes: true,
         roteiroTitulo: roteiro.titulo,
         reagentes: extraidos,
-        resumoGeral: `Foram identificados ${extraidos.length} reagente(s) e solução(ões) nas seções de bancada.`
+        resumoGeral: `Foram identificados ${extraidos.length} reagente(s) e solução(ões) nas seções de disponibilização de bancada.`
       };
     }
   }
@@ -62,20 +95,19 @@ export async function analisarReagentesDoRoteiro(roteiro: Roteiro): Promise<Resu
     };
   }
 
-  // 4. Caso não existam reagentes nas seções de Disponibilização da Bancada
+  // 4. Caso a aula não exija reagentes químicos nas bancadas (ex: higiene de mãos, simulação, anatomia)
   return {
     sucesso: true,
     requerReagentes: false,
     roteiroTitulo: roteiro.titulo,
     reagentes: [],
-    resumoGeral: "Nenhum reagente químico ou solução foi solicitado nas seções 'Disponibilização - Bancada do Aluno / Bancada de Apoio'."
+    resumoGeral: "Esta aula prática não requer o preparo prévio de reagentes químicos ou soluções líquidas nas bancadas."
   };
 }
 
 /**
  * RECONSTRUÇÃO GEOMÉTRICA DE LINHAS DE TABELA DO PDF:
  * Agrupa os fragmentos de texto pelas coordenadas Y (linha da página) e X (colunas da tabela).
- * Evita que subscritos (como HNO₃ ou NH₄OH) e colunas laterais vazem para linhas vizinhas.
  */
 async function extrairTextoDeUrlPdf(url: string): Promise<string> {
   pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
@@ -93,7 +125,6 @@ async function extrairTextoDeUrlPdf(url: string): Promise<string> {
     const page = await pdf.getPage(i);
     const content = await page.getTextContent();
 
-    // Mapeia os itens de texto com suas posições exatas X e Y
     const itemsComPosicao = content.items
       .filter((item: any) => item.str && item.str.trim().length > 0)
       .map((item: any) => {
@@ -102,7 +133,6 @@ async function extrairTextoDeUrlPdf(url: string): Promise<string> {
         return { str: item.str, x, y };
       });
 
-    // Agrupa os elementos pertencentes à mesma linha horizontal (tolerância de Y <= 4.5px)
     const linhasMap: { y: number; items: { str: string; x: number }[] }[] = [];
 
     for (const item of itemsComPosicao) {
@@ -114,16 +144,13 @@ async function extrairTextoDeUrlPdf(url: string): Promise<string> {
       }
     }
 
-    // Ordena as linhas do TOPO para a BASE da página (Y decrescente)
     linhasMap.sort((a, b) => b.y - a.y);
 
-    // Para cada linha, ordena da ESQUERDA para a DIREITA (X crescente)
     for (const linha of linhasMap) {
       linha.items.sort((a, b) => a.x - b.x);
       
       let textoLinha = linha.items.map(it => it.str).join(' ');
       
-      // Junta fragmentos de fórmulas químicas com subscritos (ex: "( H NO 3 )" -> "(HNO3)", "( NH 4 OH )" -> "(NH4OH)")
       textoLinha = textoLinha
         .replace(/\(\s*([A-Za-z]+)\s*(\d+)\s*([A-Za-z]*)\s*\)/g, '($1$2$3)')
         .replace(/\s+/g, ' ')
@@ -139,138 +166,145 @@ async function extrairTextoDeUrlPdf(url: string): Promise<string> {
 }
 
 /**
- * ALGORITMO DE FATIAMENTO POR ÍNDICES:
- * Localiza todas as ocorrências de "Nº 1", "Nº 2"... e fatia a tabela linha por linha.
+ * EXTRAÇÃO COM ISOLAMENTO DE SEÇÕES DE DISPONIBILIZAÇÃO:
+ * 1. Procura EXCLUSIVAMENTE dentro das seções "DISPONIBILIZAÇÃO - BANCADA DO ALUNO / APOIO".
+ * 2. Rejeita automaticamente instruções procedimentais de alunos (ex: "Aluno 1 espalhar...").
+ * 3. Valida quimicamente a relevância do item.
  */
 function extrairReagentesDasSecoesBancada(texto: string): ReagenteItem[] {
   const reagentesEncontrados: ReagenteItem[] = [];
 
-  // Normaliza variações de numeração (Nº 1, Nº1, N° 1, No 1)
-  const textoNormalizado = texto.replace(/N[º°o]\s*(\d+)/gi, 'Nº $1');
+  // Isola as seções de bancada no texto do documento
+  const regexSecaoBancada = /DISPONIBILIZA[ÇC][ÃA]O\s*[\s–-]\s*BANCADA\s+D[EO]\s+(ALUNO|APOIO)([\s\S]*?)(?=(?:DISPONIBILIZA[ÇC][ÃA]O|PROP[ÓO]SITO|PROCEDIMENTOS?\s+PR[ÁA]TICOS?|COMPET[ÊE]NCIAS|OBJETIVOS|1\.|2\.|3\.|$))/gi;
 
-  // Encontra todas as posições dos marcadores "Nº <numero>"
-  const regexMarcador = /Nº\s*(\d+)/gi;
-  const marcadores: { numero: number; index: number }[] = [];
-  let match: RegExpExecArray | null;
+  let matchSecao: RegExpExecArray | null;
 
-  while ((match = regexMarcador.exec(textoNormalizado)) !== null) {
-    marcadores.push({
-      numero: parseInt(match[1], 10),
-      index: match.index
-    });
-  }
+  while ((matchSecao = regexSecaoBancada.exec(texto)) !== null) {
+    const origemBancada: ReagenteItem['origemBancada'] = matchSecao[1].toUpperCase() === 'ALUNO' ? 'Bancada do Aluno' : 'Bancada de Apoio';
+    const blocoTextoSecao = matchSecao[2];
 
-  if (marcadores.length === 0) {
-    return extrairReagentesSemNumeracao(textoNormalizado);
-  }
+    // Normaliza variações de numeração dentro da seção de bancada
+    const textoNormalizado = blocoTextoSecao.replace(/N[º°o]\s*(\d+)/gi, 'Nº $1');
 
-  // Ordena os marcadores por posição no texto
-  marcadores.sort((a, b) => a.index - b.index);
+    // Procura os marcadores "Nº <numero>" dentro da seção de bancada isolada
+    const regexMarcador = /Nº\s*(\d+)/gi;
+    const marcadores: { numero: number; index: number }[] = [];
+    let matchMarcador: RegExpExecArray | null;
 
-  // Processa cada pedaço (chunk) entre o marcador atual e o próximo marcador
-  for (let i = 0; i < marcadores.length; i++) {
-    const atual = marcadores[i];
-    const proximoIndex = i < marcadores.length - 1 ? marcadores[i + 1].index : textoNormalizado.length;
-
-    let chunk = textoNormalizado.substring(atual.index, proximoIndex).trim();
-
-    // Se for o último item, corta qualquer texto de seções finais do PDF
-    if (i === marcadores.length - 1) {
-      chunk = chunk.split(/\s+(?:•|CONSIDERA[ÇC][ÕO]ES|Acesso\s+aos\s+POPs|Banho\s+Maria|Capela|Bancada\s+Lateral|PROP[ÓO]SITO|PROCEDIMENTO)/i)[0].trim();
-    }
-
-    // Extrai a quantidade (ex: "200 ml", "50 ml", "100 ml", "25 ml", "5 g")
-    const matchQtd = chunk.match(/(\d+(?:[.,]\d+)?\s*(?:mL|ml|L|g|mg|gotas|tubos|frascos|litro|litros|unidades|unidade|caixa|pacote|frasco|frascos))\b/i);
-    const quantidade = matchQtd ? matchQtd[1].trim() : 'Conforme bancada';
-
-    // Extrai a concentração estrita (ex: "10%", "50%", "1%", "2%", "0,1 M", "1 M", "0,1 N")
-    const matchConc = chunk.match(/(\d+(?:[.,]\d+)?\s*(?:M\b|mol\/L|N\b|%))/i);
-    const concentracao = matchConc ? matchConc[1].trim() : undefined;
-
-    // Se houver quantidade, corta tudo o que estiver DEPOIS da quantidade no chunk
-    if (matchQtd && matchQtd.index !== undefined) {
-      chunk = chunk.substring(0, matchQtd.index).trim();
-    }
-
-    // Remove a concentração do nome
-    let nomeLimpo = chunk;
-    if (concentracao) {
-      nomeLimpo = nomeLimpo.replace(concentracao, '');
-    }
-
-    nomeLimpo = nomeLimpo
-      .replace(/•?\s*Materiais\s*•?\s*Reagentes\s*•?\s*Equipamentos\s*Quant\.?/gi, '')
-      .replace(/\s+/g, ' ')
-      .trim();
-
-    // Identifica se pertence à Bancada do Aluno ou Bancada de Apoio
-    const trechoAnterior = textoNormalizado.substring(Math.max(0, atual.index - 400), atual.index);
-    const origemBancada: ReagenteItem['origemBancada'] = /APOIO/i.test(trechoAnterior) ? 'Bancada de Apoio' : 'Bancada do Aluno';
-
-    let categoria: ReagenteItem['categoria'] = 'Solução Reativa';
-    if (/ácido|hidr[óo]xido|hcl|naoh|h2so4/i.test(nomeLimpo)) categoria = 'Ácido / Base';
-    else if (/indicador|lugol|fenolftale[íi]na|metileno|alaranjado/i.test(nomeLimpo)) categoria = 'Indicador / Corante';
-
-    if (nomeLimpo.length > 2) {
-      reagentesEncontrados.push({
-        nome: nomeLimpo,
-        quantidade: quantidade,
-        concentracao: concentracao,
-        origemBancada: origemBancada,
-        categoria: categoria,
-        observacoes: `Disponibilizado na ${origemBancada}`
+    while ((matchMarcador = regexMarcador.exec(textoNormalizado)) !== null) {
+      marcadores.push({
+        numero: parseInt(matchMarcador[1], 10),
+        index: matchMarcador.index
       });
     }
+
+    if (marcadores.length > 0) {
+      marcadores.sort((a, b) => a.index - b.index);
+
+      for (let i = 0; i < marcadores.length; i++) {
+        const atual = marcadores[i];
+        const proximoIndex = i < marcadores.length - 1 ? marcadores[i + 1].index : textoNormalizado.length;
+
+        let chunk = textoNormalizado.substring(atual.index, proximoIndex).trim();
+
+        // Se for uma instrução procedimental (ex: "Nº 1 e ele deverá espalhar a suspensão..."), descarta!
+        if (eFraseInstrucaoOuProcedimento(chunk)) {
+          continue;
+        }
+
+        // Extrai a quantidade (ex: "200 ml", "50 ml", "100 ml", "25 ml", "5 g")
+        const matchQtd = chunk.match(/(\d+(?:[.,]\d+)?\s*(?:mL|ml|L|g|mg|gotas|tubos|frascos|litro|litros|unidades|unidade|caixa|pacote|frasco|frascos))\b/i);
+        const quantidade = matchQtd ? matchQtd[1].trim() : 'Conforme bancada';
+
+        // Extrai a concentração (ex: "10%", "50%", "1%", "2%", "0,1 M", "1 M", "0,1 N")
+        const matchConc = chunk.match(/(\d+(?:[.,]\d+)?\s*(?:M\b|mol\/L|N\b|%))/i);
+        const concentracao = matchConc ? matchConc[1].trim() : undefined;
+
+        // Corta tudo o que estiver DEPOIS da quantidade no chunk
+        if (matchQtd && matchQtd.index !== undefined) {
+          chunk = chunk.substring(0, matchQtd.index).trim();
+        }
+
+        // Remove a concentração e limpa o nome do reagente
+        let nomeLimpo = chunk;
+        if (concentracao) {
+          nomeLimpo = nomeLimpo.replace(concentracao, '');
+        }
+
+        nomeLimpo = nomeLimpo
+          .replace(/•?\s*Materiais\s*•?\s*Reagentes\s*•?\s*Equipamentos\s*Quant\.?/gi, '')
+          .replace(/\s+/g, ' ')
+          .trim();
+
+        // Rejeita vidrarias puras e instruções procedimentais residuais
+        if (eApenasEquipamentoFisico(nomeLimpo) || eFraseInstrucaoOuProcedimento(nomeLimpo)) {
+          continue;
+        }
+
+        // Se passar na validação química OU for um item de tabela limpo
+        if (nomeLimpo.length > 2 && (eReagenteOuQuimicoValido(nomeLimpo) || !eFraseInstrucaoOuProcedimento(nomeLimpo))) {
+          if (!reagentesEncontrados.some(r => r.nome.toLowerCase() === nomeLimpo.toLowerCase())) {
+            let categoria: ReagenteItem['categoria'] = 'Solução Reativa';
+            if (/ácido|hidr[óo]xido|hcl|naoh|h2so4/i.test(nomeLimpo)) categoria = 'Ácido / Base';
+            else if (/indicador|lugol|fenolftale[íi]na|metileno|alaranjado/i.test(nomeLimpo)) categoria = 'Indicador / Corante';
+
+            reagentesEncontrados.push({
+              nome: nomeLimpo,
+              quantidade: quantidade,
+              concentracao: concentracao,
+              origemBancada: origemBancada,
+              categoria: categoria,
+              observacoes: `Disponibilizado na ${origemBancada}`
+            });
+          }
+        }
+      }
+    } else {
+      // Caso a seção de bancada não use "Nº 1", analisa linha por linha da seção de bancada
+      const linhas = blocoTextoSecao.split(/[\r\n]+/);
+      for (let linha of linhas) {
+        linha = linha.trim();
+        if (eFraseInstrucaoOuProcedimento(linha) || eApenasEquipamentoFisico(linha)) continue;
+
+        if (eReagenteOuQuimicoValido(linha)) {
+          const matchQtd = linha.match(/(.*?)\s+(\d+(?:[.,]\d+)?\s*(?:mL|ml|L|g|mg))\s*$/i);
+          let nome = linha;
+          let quantidade = 'Conforme bancada';
+
+          if (matchQtd) {
+            nome = matchQtd[1].trim();
+            quantidade = matchQtd[2].trim();
+          }
+
+          const matchConc = nome.match(/(\d+(?:[.,]\d+)?\s*(?:M\b|mol\/L|N\b|%))/i);
+          const concentracao = matchConc ? matchConc[1] : undefined;
+
+          let nomeLimpo = nome;
+          if (concentracao) {
+            nomeLimpo = nomeLimpo.replace(concentracao, '').trim();
+          }
+
+          if (nomeLimpo.length > 3 && !reagentesEncontrados.some(r => r.nome.toLowerCase() === nomeLimpo.toLowerCase())) {
+            reagentesEncontrados.push({
+              nome: nomeLimpo,
+              quantidade: quantidade,
+              concentracao: concentracao,
+              origemBancada: origemBancada,
+              categoria: 'Solução Reativa',
+              observacoes: `Disponibilizado na ${origemBancada}`
+            });
+          }
+        }
+      }
+    }
   }
 
-  // Ordena numericamente por "Nº 1", "Nº 2", "Nº 3"... "Nº 9"
+  // Ordena numericamente por "Nº 1", "Nº 2", "Nº 3"...
   return reagentesEncontrados.sort((a, b) => {
     const numA = parseInt((a.nome.match(/Nº\s*(\d+)/i) || [])[1] || '0', 10);
     const numB = parseInt((b.nome.match(/Nº\s*(\d+)/i) || [])[1] || '0', 10);
     return numA - numB;
   });
-}
-
-/**
- * Fallback para tabelas sem o prefixo "Nº X"
- */
-function extrairReagentesSemNumeracao(texto: string): ReagenteItem[] {
-  const reagentesEncontrados: ReagenteItem[] = [];
-
-  const regexSolucaoVolume = /(?:solu[çc][ãa]o|ácido|hidr[óo]xido|álcool|lugol|fenolftale[íi]na|alaranjado|água destilada|ágar|agar|caldo)\s+[^.\n\r]*?\s+(\d+(?:[.,]\d+)?\s*(?:mL|ml|L|g|mg))\b/gi;
-  let matchSol: RegExpExecArray | null;
-
-  while ((matchSol = regexSolucaoVolume.exec(texto)) !== null) {
-    const linha = matchSol[0].trim();
-    if (eApenasEquipamentoFisico(linha)) continue;
-
-    const matchQtd = linha.match(/(.*?)\s+(\d+(?:[.,]\d+)?\s*(?:mL|ml|L|g|mg))\s*$/i);
-    if (matchQtd) {
-      const nome = matchQtd[1].trim();
-      const quantidade = matchQtd[2].trim();
-
-      const matchConc = nome.match(/(\d+(?:[.,]\d+)?\s*(?:M\b|mol\/L|N\b|%))/i);
-      const concentracao = matchConc ? matchConc[1] : undefined;
-
-      let nomeLimpo = nome;
-      if (concentracao) {
-        nomeLimpo = nomeLimpo.replace(concentracao, '').trim();
-      }
-
-      if (nomeLimpo.length > 3 && !reagentesEncontrados.some(r => r.nome.toLowerCase() === nomeLimpo.toLowerCase())) {
-        reagentesEncontrados.push({
-          nome: nomeLimpo,
-          quantidade: quantidade,
-          concentracao: concentracao,
-          origemBancada: 'Bancada do Aluno',
-          categoria: 'Solução Reativa',
-          observacoes: 'Disponibilizado na Bancada do Aluno'
-        });
-      }
-    }
-  }
-
-  return reagentesEncontrados;
 }
 
 /**
@@ -294,7 +328,8 @@ function eApenasEquipamentoFisico(linha: string): boolean {
 function inferirReagentesPorTema(titulo: string, tema: string, disciplina: string): ReagenteItem[] {
   const busca = `${titulo} ${tema} ${disciplina}`.toLowerCase();
 
-  if (/titula[çc][ãa]o|[áa]cido|base|alaranjado|l[áa]tico|indicador|molar/i.test(busca)) {
+  // Apenas infere se explicitamente tiver temas de química/bioquímica/titulação com reagentes
+  if (/titula[çc][ãa]o|bioqu[íi]mica|rea[çc][ãa]o qu[íi]mica/i.test(busca)) {
     return [
       {
         nome: "Nº 1 – Solução e Alaranjado de Metila",
