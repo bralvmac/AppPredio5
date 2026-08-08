@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, SlidersHorizontal, X, RotateCcw, PlusCircle, Sun, Moon } from 'lucide-react';
+import { Search, SlidersHorizontal, X, RotateCcw, PlusCircle, Sun, Moon, FlaskConical } from 'lucide-react';
 import { FiltrosState, OpcoesFiltros } from '../types/roteiro';
 
 interface FiltrosBuscaProps {
@@ -9,6 +9,7 @@ interface FiltrosBuscaProps {
   onLimparFiltros: () => void;
   totalResultados: number;
   onOpenUploadModal: () => void;
+  onOpenRelatorioGeralReagentes: () => void;
   tema: 'dark' | 'light';
   onToggleTema: () => void;
 }
@@ -20,6 +21,7 @@ export const FiltrosBusca: React.FC<FiltrosBuscaProps> = ({
   onLimparFiltros,
   totalResultados,
   onOpenUploadModal,
+  onOpenRelatorioGeralReagentes,
   tema,
   onToggleTema
 }) => {
@@ -39,7 +41,7 @@ export const FiltrosBusca: React.FC<FiltrosBuscaProps> = ({
   return (
     <div className="space-y-4 mb-6 animate-fade-in">
       
-      {/* Linha Superior: Busca + Botão Filtros + Botão Tema + Botão Cadastrar Roteiro */}
+      {/* Linha Superior: Busca + Botão Filtros + Botão Tema + Botão Todos Reagentes + Botão Cadastrar Roteiro */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3">
         
         {/* Input de Busca Geral */}
@@ -66,13 +68,13 @@ export const FiltrosBusca: React.FC<FiltrosBuscaProps> = ({
           )}
         </div>
 
-        {/* Grupo de Botões (Filtros + Tema + Cadastrar Roteiro) */}
-        <div className="flex items-center gap-2.5 w-full sm:w-auto">
+        {/* Grupo de Botões Principais */}
+        <div className="flex items-center gap-2 sm:gap-2.5 w-full sm:w-auto flex-wrap sm:flex-nowrap">
           
           {/* Botão de Toggle de Filtros */}
           <button
             onClick={() => setMostrarFiltros(!mostrarFiltros)}
-            className={`flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-4 py-3 rounded-2xl border text-xs font-bold transition-all shadow-sm shrink-0 cursor-pointer ${
+            className={`flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-3.5 py-3 rounded-2xl border text-xs font-bold transition-all shadow-sm shrink-0 cursor-pointer ${
               mostrarFiltros || temFiltrosAtivos
                 ? 'bg-brand-500/10 text-brand-700 dark:text-brand-400 border-brand-500/30'
                 : isDark
@@ -98,47 +100,81 @@ export const FiltrosBusca: React.FC<FiltrosBuscaProps> = ({
                 ? 'bg-slate-900 border-slate-800 text-amber-400 hover:bg-slate-800'
                 : 'bg-white border-slate-300 text-amber-600 hover:bg-slate-100'
             }`}
-            title={isDark ? "Alternar para Modo Claro" : "Alternar para Modo Escuro"}
+            title={isDark ? 'Mudar para Tema Claro' : 'Mudar para Tema Escuro'}
           >
             {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
           </button>
 
-          {/* Botão + Cadastrar Roteiro Integrado */}
+          {/* Botão NOVO: 🧪 Todos os Reagentes (ao lado de Cadastrar Roteiro) */}
+          <button
+            onClick={onOpenRelatorioGeralReagentes}
+            className="inline-flex items-center justify-center gap-1.5 px-3.5 py-3 rounded-2xl text-xs font-extrabold transition-all shadow-sm shrink-0 cursor-pointer border"
+            style={
+              isDark
+                ? { backgroundColor: 'rgba(245, 158, 11, 0.15)', color: '#fbbf24', borderColor: 'rgba(245, 158, 11, 0.3)' }
+                : { backgroundColor: '#fef3c7', color: '#78350f', borderColor: '#fde68a' }
+            }
+            title="Relatório Geral de Reagentes do Laboratório"
+          >
+            <FlaskConical className="w-4 h-4 shrink-0" />
+            <span>Todos os Reagentes</span>
+          </button>
+
+          {/* Botão Cadastrar Roteiro */}
           <button
             onClick={onOpenUploadModal}
-            className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl bg-gradient-to-r from-brand-500 to-teal-400 hover:from-brand-400 hover:to-teal-300 text-slate-950 text-xs font-extrabold shadow-lg shadow-brand-500/20 transition-all shrink-0 cursor-pointer whitespace-nowrap"
+            className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-2xl text-xs font-extrabold text-slate-950 bg-gradient-to-r from-brand-500 to-teal-400 hover:from-brand-400 hover:to-teal-300 transition-all shadow-md shadow-brand-500/20 shrink-0 cursor-pointer"
           >
             <PlusCircle className="w-4 h-4 stroke-[2.5]" />
             <span>Cadastrar Roteiro</span>
           </button>
+
         </div>
 
       </div>
 
-      {/* Painel Expansível de Filtros Combinados */}
+      {/* Painel Expansível de Filtros Avançados */}
       {mostrarFiltros && (
-        <div className={`p-4 sm:p-5 rounded-2xl border space-y-4 animate-fade-in shadow-lg ${
+        <div className={`p-4 rounded-2xl border transition-all animate-fade-in ${
           isDark
             ? 'glass-panel border-slate-800'
-            : 'bg-white border-slate-300 text-slate-900'
+            : 'bg-white border-slate-300 text-slate-900 shadow-md'
         }`}>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
+          <div className="flex items-center justify-between mb-3 pb-2 border-b border-slate-200 dark:border-slate-800">
+            <span className={`text-xs font-extrabold uppercase tracking-wider ${
+              isDark ? 'text-slate-400' : 'text-slate-900'
+            }`}>
+              Filtros Avançados
+            </span>
+
+            {temFiltrosAtivos && (
+              <button
+                onClick={onLimparFiltros}
+                className="inline-flex items-center gap-1 text-xs text-rose-500 hover:text-rose-400 font-bold transition-colors"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>Limpar Filtros</span>
+              </button>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
             
-            {/* 1. Filtro por Curso */}
+            {/* 1. Curso */}
             <div>
-              <label className={`block text-[11px] font-extrabold uppercase tracking-wider mb-1.5 ${
-                isDark ? 'text-slate-300' : 'text-slate-800'
+              <label className={`block text-[11px] font-bold mb-1 ${
+                isDark ? 'text-slate-400' : 'text-slate-900'
               }`}>
                 Curso
               </label>
               <select
                 value={filtros.curso}
                 onChange={(e) => onFiltroChange({ ...filtros, curso: e.target.value })}
-                className={`w-full px-3 py-2.5 rounded-xl text-xs font-semibold focus:outline-none focus:border-brand-500 ${
+                className={`w-full py-2 px-3 rounded-xl text-xs font-bold transition-colors ${
                   isDark
-                    ? 'bg-slate-950 border border-slate-800 text-slate-200'
-                    : 'bg-slate-50 border border-slate-300 text-slate-900'
+                    ? 'bg-slate-900 border border-slate-800 text-slate-200'
+                    : 'bg-slate-100 border border-slate-300 text-slate-950 font-extrabold'
                 }`}
               >
                 <option value="">Todos os Cursos</option>
@@ -148,120 +184,87 @@ export const FiltrosBusca: React.FC<FiltrosBuscaProps> = ({
               </select>
             </div>
 
-            {/* 2. Filtro por Unidade Curricular */}
+            {/* 2. Modalidade / Tipo de Curso */}
             <div>
-              <label className={`block text-[11px] font-extrabold uppercase tracking-wider mb-1.5 ${
-                isDark ? 'text-slate-300' : 'text-slate-800'
+              <label className={`block text-[11px] font-bold mb-1 ${
+                isDark ? 'text-slate-400' : 'text-slate-900'
               }`}>
-                Unidade Curricular (Disciplina)
+                Modalidade
+              </label>
+              <select
+                value={filtros.tipoCurso}
+                onChange={(e) => onFiltroChange({ ...filtros, tipoCurso: e.target.value as any })}
+                className={`w-full py-2 px-3 rounded-xl text-xs font-bold transition-colors ${
+                  isDark
+                    ? 'bg-slate-900 border border-slate-800 text-slate-200'
+                    : 'bg-slate-100 border border-slate-300 text-slate-950 font-extrabold'
+                }`}
+              >
+                <option value="Todos">Todas as Modalidades</option>
+                <option value="Presencial">Presencial</option>
+                <option value="Semi-presencial">Semi-presencial</option>
+              </select>
+            </div>
+
+            {/* 3. Modelo do Componente */}
+            <div>
+              <label className={`block text-[11px] font-bold mb-1 ${
+                isDark ? 'text-slate-400' : 'text-slate-900'
+              }`}>
+                Modelo
+              </label>
+              <select
+                value={filtros.modeloComponente}
+                onChange={(e) => onFiltroChange({ ...filtros, modeloComponente: e.target.value as any })}
+                className={`w-full py-2 px-3 rounded-xl text-xs font-bold transition-colors ${
+                  isDark
+                    ? 'bg-slate-900 border border-slate-800 text-slate-200'
+                    : 'bg-slate-100 border border-slate-300 text-slate-950 font-extrabold'
+                }`}
+              >
+                <option value="Todos">Todos os Modelos</option>
+                <option value="Básico">Básico</option>
+                <option value="Específico">Específico</option>
+              </select>
+            </div>
+
+            {/* 4. Unidade Curricular (Disciplina) */}
+            <div>
+              <label className={`block text-[11px] font-bold mb-1 ${
+                isDark ? 'text-slate-400' : 'text-slate-900'
+              }`}>
+                Unidade Curricular
               </label>
               <select
                 value={filtros.disciplina}
                 onChange={(e) => onFiltroChange({ ...filtros, disciplina: e.target.value })}
-                className={`w-full px-3 py-2.5 rounded-xl text-xs font-semibold focus:outline-none focus:border-brand-500 ${
+                className={`w-full py-2 px-3 rounded-xl text-xs font-bold transition-colors ${
                   isDark
-                    ? 'bg-slate-950 border border-slate-800 text-slate-200'
-                    : 'bg-slate-50 border border-slate-300 text-slate-900'
+                    ? 'bg-slate-900 border border-slate-800 text-slate-200'
+                    : 'bg-slate-100 border border-slate-300 text-slate-950 font-extrabold'
                 }`}
               >
-                <option value="">Todas as Unidades Curriculares</option>
+                <option value="">Todas as Unidades</option>
                 {opcoes.disciplinas.map((d) => (
                   <option key={d} value={d}>{d}</option>
                 ))}
               </select>
             </div>
 
-            {/* 3. Filtro por Docente / Tutor */}
+            {/* 5. Tema da Aula */}
             <div>
-              <label className={`block text-[11px] font-extrabold uppercase tracking-wider mb-1.5 ${
-                isDark ? 'text-slate-300' : 'text-slate-800'
+              <label className={`block text-[11px] font-bold mb-1 ${
+                isDark ? 'text-slate-400' : 'text-slate-900'
               }`}>
-                Docente / Tutor
-              </label>
-              <select
-                value={filtros.docente}
-                onChange={(e) => onFiltroChange({ ...filtros, docente: e.target.value })}
-                className={`w-full px-3 py-2.5 rounded-xl text-xs font-semibold focus:outline-none focus:border-brand-500 ${
-                  isDark
-                    ? 'bg-slate-950 border border-slate-800 text-slate-200'
-                    : 'bg-slate-50 border border-slate-300 text-slate-900'
-                }`}
-              >
-                <option value="">Todos os Docentes / Tutores</option>
-                {opcoes.docentes.map((doc) => (
-                  <option key={doc} value={doc}>{doc}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* 4. Filtro por Tipo de Curso */}
-            <div>
-              <label className={`block text-[11px] font-extrabold uppercase tracking-wider mb-1.5 ${
-                isDark ? 'text-slate-300' : 'text-slate-800'
-              }`}>
-                Tipo de Curso
-              </label>
-              <div className={`flex rounded-xl p-1 border ${
-                isDark ? 'bg-slate-950 border-slate-800' : 'bg-slate-100 border-slate-300'
-              }`}>
-                {(['Todos', 'Presencial', 'Semi-presencial'] as const).map((tipo) => (
-                  <button
-                    key={tipo}
-                    type="button"
-                    onClick={() => onFiltroChange({ ...filtros, tipoCurso: tipo })}
-                    className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-bold transition-all ${
-                      filtros.tipoCurso === tipo
-                        ? 'bg-brand-500 text-slate-950 font-extrabold shadow-sm'
-                        : isDark ? 'text-slate-400 hover:text-slate-200' : 'text-slate-700 hover:text-slate-950'
-                    }`}
-                  >
-                    {tipo}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* 5. Filtro por Modelo de Componente */}
-            <div>
-              <label className={`block text-[11px] font-extrabold uppercase tracking-wider mb-1.5 ${
-                isDark ? 'text-slate-300' : 'text-slate-800'
-              }`}>
-                Modelo Componente
-              </label>
-              <div className={`flex rounded-xl p-1 border ${
-                isDark ? 'bg-slate-950 border-slate-800' : 'bg-slate-100 border-slate-300'
-              }`}>
-                {(['Todos', 'Básico', 'Específico'] as const).map((mod) => (
-                  <button
-                    key={mod}
-                    type="button"
-                    onClick={() => onFiltroChange({ ...filtros, modeloComponente: mod })}
-                    className={`flex-1 py-1.5 px-2 rounded-lg text-xs font-bold transition-all ${
-                      filtros.modeloComponente === mod
-                        ? 'bg-cyan-500 text-slate-950 font-extrabold shadow-sm'
-                        : isDark ? 'text-slate-400 hover:text-slate-200' : 'text-slate-700 hover:text-slate-950'
-                    }`}
-                  >
-                    {mod}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* 6. Filtro por Tema da Aula */}
-            <div>
-              <label className={`block text-[11px] font-extrabold uppercase tracking-wider mb-1.5 ${
-                isDark ? 'text-slate-300' : 'text-slate-800'
-              }`}>
-                Tema da Aula Prática
+                Tema da Aula
               </label>
               <select
                 value={filtros.tema}
                 onChange={(e) => onFiltroChange({ ...filtros, tema: e.target.value })}
-                className={`w-full px-3 py-2.5 rounded-xl text-xs font-semibold focus:outline-none focus:border-brand-500 ${
+                className={`w-full py-2 px-3 rounded-xl text-xs font-bold transition-colors ${
                   isDark
-                    ? 'bg-slate-950 border border-slate-800 text-slate-200'
-                    : 'bg-slate-50 border border-slate-300 text-slate-900'
+                    ? 'bg-slate-900 border border-slate-800 text-slate-200'
+                    : 'bg-slate-100 border border-slate-300 text-slate-950 font-extrabold'
                 }`}
               >
                 <option value="">Todos os Temas</option>
@@ -271,25 +274,30 @@ export const FiltrosBusca: React.FC<FiltrosBuscaProps> = ({
               </select>
             </div>
 
-          </div>
-
-          {/* Linha de Limpeza de Filtros se Houver algum ativo */}
-          {temFiltrosAtivos && (
-            <div className={`pt-3 border-t flex items-center justify-between ${
-              isDark ? 'border-slate-800/80' : 'border-slate-200'
-            }`}>
-              <span className={`text-[11px] font-medium ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
-                Filtros ativos aplicados na busca
-              </span>
-              <button
-                onClick={onLimparFiltros}
-                className="inline-flex items-center gap-1.5 text-xs text-rose-600 dark:text-rose-400 hover:underline font-extrabold"
+            {/* 6. Docente / Tutor */}
+            <div>
+              <label className={`block text-[11px] font-bold mb-1 ${
+                isDark ? 'text-slate-400' : 'text-slate-900'
+              }`}>
+                Docente / Tutor
+              </label>
+              <select
+                value={filtros.docente}
+                onChange={(e) => onFiltroChange({ ...filtros, docente: e.target.value })}
+                className={`w-full py-2 px-3 rounded-xl text-xs font-bold transition-colors ${
+                  isDark
+                    ? 'bg-slate-900 border border-slate-800 text-slate-200'
+                    : 'bg-slate-100 border border-slate-300 text-slate-950 font-extrabold'
+                }`}
               >
-                <RotateCcw className="w-3.5 h-3.5" />
-                <span>Limpar Filtros</span>
-              </button>
+                <option value="">Todos os Docentes</option>
+                {opcoes.docentes.map((doc) => (
+                  <option key={doc} value={doc}>{doc}</option>
+                ))}
+              </select>
             </div>
-          )}
+
+          </div>
 
         </div>
       )}

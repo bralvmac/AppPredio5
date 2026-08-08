@@ -4,6 +4,7 @@ import { CardRoteiro } from './components/CardRoteiro';
 import { PastaRoteirosView } from './components/PastaRoteirosView';
 import { PdfModalViewer } from './components/PdfModalViewer';
 import { ReagentesModal } from './components/ReagentesModal';
+import { RelatorioGeralReagentesModal } from './components/RelatorioGeralReagentesModal';
 import { UploadModal } from './components/UploadModal';
 import { Roteiro, FiltrosState, OpcoesFiltros } from './types/roteiro';
 import { buscarRoteiros, deletarRoteiro, supabase, isSupabaseConfigured } from './lib/supabaseClient';
@@ -50,6 +51,7 @@ export const App: React.FC = () => {
   // Modais
   const [roteiroSelecionado, setRoteiroSelecionado] = useState<Roteiro | null>(null);
   const [roteiroParaReagentes, setRoteiroParaReagentes] = useState<Roteiro | null>(null);
+  const [relatorioGeralModalAberto, setRelatorioGeralModalAberto] = useState<boolean>(false);
   const [uploadModalAberto, setUploadModalAberto] = useState<boolean>(false);
 
   // Estado dos Filtros
@@ -217,7 +219,7 @@ export const App: React.FC = () => {
       {/* Conteúdo Principal */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
         
-        {/* Busca, Filtros, Botão Cadastrar Roteiro e Botão de Tema */}
+        {/* Busca, Filtros, Botão Cadastrar Roteiro, Botão Relatório Geral Reagentes e Botão de Tema */}
         <FiltrosBusca
           filtros={filtros}
           opcoes={opcoesFiltros}
@@ -225,6 +227,7 @@ export const App: React.FC = () => {
           onLimparFiltros={handleLimparFiltros}
           totalResultados={roteirosFiltrados.length}
           onOpenUploadModal={() => setUploadModalAberto(true)}
+          onOpenRelatorioGeralReagentes={() => setRelatorioGeralModalAberto(true)}
           tema={tema}
           onToggleTema={toggleTema}
         />
@@ -338,10 +341,18 @@ export const App: React.FC = () => {
         onOpenReagentes={setRoteiroParaReagentes}
       />
 
-      {/* Modal de Análise de Reagentes */}
+      {/* Modal de Análise Individual de Reagentes */}
       <ReagentesModal
         roteiro={roteiroParaReagentes}
         onClose={() => setRoteiroParaReagentes(null)}
+        isDark={isDark}
+      />
+
+      {/* Modal de Relatório Geral de Reagentes de Todos os Roteiros */}
+      <RelatorioGeralReagentesModal
+        isOpen={relatorioGeralModalAberto}
+        onClose={() => setRelatorioGeralModalAberto(false)}
+        roteiros={roteiros}
         isDark={isDark}
       />
 
