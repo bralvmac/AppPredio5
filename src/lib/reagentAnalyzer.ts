@@ -22,8 +22,8 @@ export interface ResultadoAnaliseReagentes {
 /**
  * Filtro estrito para descartar:
  * 1. Cabeçalhos de tabelas
- * 2. Vidrarias, utensílios e equipamentos físicos
- * 3. Meios de cultura, bactérias, solução salina, solução de limpeza, amostra biológica isolada
+ * 2. Vidrarias, utensílios, equipamentos físicos e amostras biológicas
+ * 3. Meios de cultura, bactérias, solução salina, solução de limpeza
  */
 function eLinhaDescartavelOuCabecalho(linha: string): boolean {
   if (!linha || linha.length < 2) return true;
@@ -33,7 +33,7 @@ function eLinhaDescartavelOuCabecalho(linha: string): boolean {
   if (/^(?:materiais|reagentes|equipamentos|quant\.?|quantidade|\bullet)$/i.test(linha)) return true;
   if (/^DISPONIBILIZA[ÇC][ÃA]O/i.test(linha)) return true;
 
-  // 2. Exclusão de itens não químicos
+  // 2. Exclusão de itens não químicos (meios de cultura, bactérias, salina, limpeza, petri)
   const itensNaoQuimicosExcluidos = [
     /meio[s]?\s+de\s+cultura/i, /[áa]gar/i, /agar/i, /caldo/i, /peptona/i, /macconkey/i, /sabouraud/i, /tsa\b/i, /nutritivo/i,
     /bact[ée]ria/i, /microrganismo/i, /col[ôo]nia/i, /ufc/i, /suspens[ãa]o bacteriana/i, /cepa/i, /cultura/i,
@@ -46,8 +46,8 @@ function eLinhaDescartavelOuCabecalho(linha: string): boolean {
     return true;
   }
 
-  // 3. Descarta vidrarias, equipamentos e materiais de apoio (micropipetas, ponteiras, espectrofotômetro, banho-maria, estantes)
-  const equipamentosFisicos = [
+  // 3. Descarta vidrarias, equipamentos físicos e amostras biológicas humanas
+  const equipamentosFisicosEAmostras = [
     /micropipeta/i, /ponteira/i, /espectrofot[ôo]metro/i, /banho-maria/i, /banho maria/i,
     /bal[ãa]o volum[ée]trico/i, /b[ée]quer/i, /erlenmeyer/i, /funil/i,
     /bast[ãa]o de vidro/i, /pipeta/i, /proveta/i, /tubo[s]? de ensaio/i,
@@ -55,32 +55,38 @@ function eLinhaDescartavelOuCabecalho(linha: string): boolean {
     /bico de bunsen/i, /luva/i, /garrote/i, /peneira/i, /papel filtro/i, /pisseta/i,
     /balan[çc]a/i, /recipiente para pesagem/i, /rel[óo]gio de vidro/i,
     /estante/i, /tesoura/i, /bisturi/i, /al[çc]a/i, /esp[áa]tula/i, /suporte/i,
-    /amostra biol[óo]gica/i
+    /amostra biol[óo]gica/i, /sangue humano/i, /urina humana/i, /saliva/i
   ];
 
-  const temProdutoQuimicoOuKit = /kit|ensaio|enzim[áa]tico|liquiform|labtest|padr[ãa]o|solutos?:|[áa]cido|hidr[óo]xido|reativo|indicador|lugol|alaranjado|cloreto\s+de|sulfato\s+de|glicose|amido|ninhidrina|benedict|biureto|turk|naoh|hcl|h2so4|hno3|nacl\b|cuso4\b/i.test(linha);
+  const temProdutoQuimicoOuKit = /kit|ensaio|enzim[áa]tico|liquiform|labtest|bioclin|doles|kovalent|wiener|gold analisa|ref\.?\s*\d+|colesterol|triglic[ée]rides|triglicer[íi]deos|glicose|glicemia|ur[ée]ia|creatinina|bilirrubina|transaminases|tgo|tgp|prote[íi]nas|solutos?:|[áa]cido|hidr[óo]xido|reativo|indicador|lugol|alaranjado|cloreto\s+de|sulfato\s+de|amido|ninhidrina|benedict|biureto|turk|naoh|hcl|h2so4|hno3|nacl\b|cuso4\b/i.test(linha);
 
-  return equipamentosFisicos.some(regex => regex.test(linha)) && !temProdutoQuimicoOuKit;
+  return equipamentosFisicosEAmostras.some(regex => regex.test(linha)) && !temProdutoQuimicoOuKit;
 }
 
 /**
  * Valida se a string descreve um PRODUTO QUÍMICO, REAGENTE OU KIT DE ENSAIO ENZIMÁTICO
  */
 function eReagenteOuQuimicoValido(nome: string): boolean {
-  if (/meio|ágar|agar|caldo|bactéria|microrganismo|salina|fisiológica|detergente|limpeza/i.test(nome)) {
+  if (/meio|ágar|agar|caldo|bactéria|microrganismo|salina|fisiológica|detergente|limpeza|sangue humano|amostra biológica/i.test(nome)) {
     return false;
   }
 
   const produtosQuimicosEKits = [
-    /kit\b/i, /kit\s+de\s+ensaio/i, /kit\s+de\s+reagente/i, /kit\s+diagn[óo]stico/i, /kit\s+enzim[áa]tico/i, /ensaio/i, /enzim[áa]tic[oa]/i, /liquiform/i, /labtest/i, /padr[ãa]o/i,
-    /solutos?:/i, /reagentes?:/i, /[áa]cido/i, /hidr[óo]xido/i, /reativo/i,
-    /glicose/i, /amido/i, /lactose/i, /sacarose/i, /fructose/i, /prote[íi]na/i, /albumina/i,
+    /kit\b/i, /kit\s+de\s+ensaio/i, /kit\s+de\s+reagente/i, /kit\s+diagn[óo]stico/i, /kit\s+enzim[áa]tico/i, /ensaio/i, /enzim[áa]tic[oa]/i, /liquiform/i, /labtest/i, /bioclin/i, /doles/i, /kovalent/i, /wiener/i, /gold analisa/i, /ref\.?\s*\d+/i,
+    /colesterol/i, /triglic[ée]rides/i, /triglicer[íi]deos/i, /glicose/i, /glicemia/i, /ur[ée]ia/i, /creatinina/i, /bilirrubina/i, /transaminases/i, /tgo/i, /tgp/i, /prote[íi]nas/i, /ácido úrico/i, /hemoglobina/i,
+    /padr[ãa]o/i, /solutos?:/i, /reagentes?:/i, /[áa]cido/i, /hidr[óo]xido/i, /reativo/i,
+    /amido/i, /lactose/i, /sacarose/i, /fructose/i, /prote[íi]na/i, /albumina/i,
     /corante/i, /indicador/i, /tamp[ãa]o/i, /[áa]lcool/i, /etanol/i, /metanol/i, /cloreto\s+de/i,
     /sulfato\s+de/i, /nitrato\s+de/i, /acetato\s+de/i, /hipoclorito\s+de/i, /ninhidrina/i,
     /lugol/i, /alaranjado/i, /benedict/i, /biureto/i, /tollens/i, /barfoed/i, /fehling/i,
     /turk/i, /naoh/i, /hcl/i, /h2so4/i, /hno3/i, /nh4oh/i, /nacl\b/i, /cuso4\b/i,
     /soro\s+anti/i, /leishman/i, /giemsa/i, /formol/i, /alfa-naftol/i, /[áa]gua destilada/i
   ];
+
+  // Se a linha estiver em uma seção de bancada, não for hardware nem mostra biológica e tiver Ref. ou marca diagnóstica
+  if (/ref\.?\s*\d+/i.test(nome) || /labtest|bioclin|doles|kovalent/i.test(nome)) {
+    return true;
+  }
 
   return produtosQuimicosEKits.some(regex => regex.test(nome));
 }
@@ -89,7 +95,7 @@ function eReagenteOuQuimicoValido(nome: string): boolean {
  * Classifica a categoria do produto ou kit
  */
 function classificarCategoria(nome: string): ReagenteItem['categoria'] {
-  if (/kit|ensaio|liquiform|labtest|elisa|dosagem|diagn[óo]stico/i.test(nome)) {
+  if (/kit|ensaio|liquiform|labtest|bioclin|doles|ref\.?\s*\d+|colesterol|triglic[ée]rides|triglicer[íi]deos|glicose|glicemia|ur[ée]ia|creatinina|elisa|dosagem|diagn[óo]stico/i.test(nome)) {
     return 'Kit de Ensaio / Diagnóstico';
   }
   if (/ácido|hidr[óo]xido|hcl|naoh|h2so4/i.test(nome)) {
@@ -231,8 +237,8 @@ function extrairReagentesDasSecoesBancada(texto: string): ReagenteItem[] {
         continue;
       }
 
-      // CASO 2: Formato com "Kit...", "Solutos:", "Reagentes:" ou nomes de químicos
-      if ((/kit|solutos?:|solu[çc][ãa]o\s+de/i.test(linha) || eReagenteOuQuimicoValido(linha)) && !eLinhaDescartavelOuCabecalho(linha)) {
+      // CASO 2: Qualquer linha da tabela que não seja vidraria/equipamento nem amostra biológica
+      if (!eLinhaDescartavelOuCabecalho(linha)) {
         const extraidos = extrairLinhaSolutosOuQuimicos(linha, secao.origem);
         extraidos.forEach(it => {
           if (!reagentesEncontrados.some(r => r.nome.toLowerCase() === it.nome.toLowerCase())) {
