@@ -22,19 +22,14 @@ export interface ResultadoAnaliseReagentes {
 /**
  * Filtro estrito para descartar:
  * 1. Cabeçalhos de tabelas e enunciados
- * 2. Vidrarias, utensílios, equipamentos físicos e amostras biológicas
- * 3. Meios de cultura, bactérias, solução salina, solução de limpeza
- * 4. Passos procedimentais dos alunos ("aluno 1 deverá", "apertar a mão", etc.)
+ * 2. Vidrarias, utensílios, equipamentos físicos e amostras biológicas humanas
+ * 3. Meios de cultura, bactérias, solução salina, solução de limpeza, placa de petri
+ * 4. Instruções e procedimentos do aluno
  */
 function eLinhaDescartavelOuCabecalho(linha: string): boolean {
   if (!linha || linha.length < 2) return true;
 
-  // Descarta passos e instruções procedimentais que não são lista de insumos
-  if (/dever[áa]|espalhar|apertar|procedimento|objetivo|aluno\s+\d+|equipe|discutir|responder|calcular/i.test(linha)) {
-    return true;
-  }
-
-  // Descarta cabeçalhos da tabela USF
+  // Descarta cabeçalhos da tabela USF (ex: "• Materiais • Reagentes • Equipamentos Quant.")
   if (/•?\s*Materiais\s*•?\s*Reagentes\s*•?\s*Equipamentos/i.test(linha)) return true;
   if (/^(?:materiais|reagentes|equipamentos|quant\.?|quantidade|\bullet)$/i.test(linha)) return true;
   if (/^DISPONIBILIZA[ÇC][ÃA]O/i.test(linha)) return true;
@@ -114,7 +109,7 @@ function classificarCategoria(nome: string): ReagenteItem['categoria'] {
 }
 
 /**
- * Analisa o roteiro de aula prática buscando produtos químicos e kits nas bancadas
+ * Analisa o roteiro de aula prática buscando EXCLUSIVAMENTE nas seções "BANCADA DO ALUNO" e "BANCADA DE APOIO"
  */
 export async function analisarReagentesDoRoteiro(roteiro: Roteiro): Promise<ResultadoAnaliseReagentes> {
   let textoPdf = '';
@@ -194,7 +189,6 @@ async function extrairTextoDeUrlPdf(url: string): Promise<string> {
       
       let textoLinha = linha.items.map(it => it.str).join(' ');
       
-      // Normalização de traços Unicode (en-dash, em-dash, hífen) e espaços não-quebráveis
       textoLinha = textoLinha
         .replace(/[\u2013\u2014\u2015\u2212]/g, '-')
         .replace(/\u00A0/g, ' ')
@@ -212,23 +206,22 @@ async function extrairTextoDeUrlPdf(url: string): Promise<string> {
 }
 
 /**
- * EXTRAÇÃO DAS SEÇÕES "BANCADA DO ALUNO" E "BANCADA DE APOIO" COM FALLBACK ROBUSTO
+ * EXTRAÇÃO 100% RESTRITA ÀS SEÇÕES "BANCADA DO ALUNO" E "BANCADA DE APOIO"
  */
 function extrairReagentesDasSecoesBancada(texto: string): ReagenteItem[] {
   const reagentesEncontrados: ReagenteItem[] = [];
 
-  // Normaliza o texto total para garantir casamento de regex perfeito
   const textoNorm = texto
     .replace(/[\u2013\u2014\u2015\u2212]/g, '-')
     .replace(/\u00A0/g, ' ');
 
   const secoes = [
     { 
-      regex: /DISPONIBILIZA[ÇC][ÃA]O\s*-?\s*BANCADA\s+DO\s+ALUNO([\s\S]*?)(?=DISPONIBILIZA[ÇC][ÃA]O\s*-?\s*BANCADA\s+DE\s+APOIO|PROCEDIMENTOS?|COMPET[ÊE]NCIAS|OBJETIVOS|CONSIDERA[ÇC][ÕO]ES|$)/i, 
+      regex: /DISPONIBILIZA[ÇC][ÃA]O\s*[\s-]*\s*BANCADA\s+DO\s+ALUNO([\s\S]*?)(?=DISPONIBILIZA[ÇC][ÃA]O\s*[\s-]*\s*BANCADA\s+DE\s+APOIO|PROCEDIMENTOS?|COMPET[ÊE]NCIAS|OBJETIVOS|CONSIDERA[ÇC][ÕO]ES|CONSIDERA|AVALIA[ÇC][ÃA]O|INTRODU[ÇC][ÃA]O|$)/i, 
       origem: 'Bancada do Aluno' as const 
     },
     { 
-      regex: /DISPONIBILIZA[ÇC][ÃA]O\s*-?\s*BANCADA\s+DE\s+APOIO([\s\S]*?)(?=DISPONIBILIZA[ÇC][ÃA]|PROCEDIMENTOS?|COMPET[ÊE]NCIAS|OBJETIVOS|CONSIDERA[ÇC][ÕO]ES|$)/i, 
+      regex: /DISPONIBILIZA[ÇC][ÃA]O\s*[\s-]*\s*BANCADA\s+DE\s+APOIO([\s\S]*?)(?=DISPONIBILIZA[ÇC][ÃA]|PROCEDIMENTOS?|COMPET[ÊE]NCIAS|OBJETIVOS|CONSIDERA[ÇC][ÕO]ES|CONSIDERA|AVALIA[ÇC][ÃA]O|INTRODU[ÇC][ÃA]O|$)/i, 
       origem: 'Bancada de Apoio' as const 
     }
   ];
@@ -257,37 +250,9 @@ function extrairReagentesDasSecoesBancada(texto: string): ReagenteItem[] {
         continue;
       }
 
-      // CASO 2: Qualquer item válido que não seja vidraria/equipamento nem amostra biológica
+      // CASO 2: Linha de tabela dentro da seção de bancada que descreve produto químico ou kit
       if (eReagenteOuQuimicoValido(linha)) {
         const extraidos = extrairLinhaSolutosOuQuimicos(linha, secao.origem);
-        extraidos.forEach(it => {
-          if (!reagentesEncontrados.some(r => r.nome.toLowerCase() === it.nome.toLowerCase())) {
-            reagentesEncontrados.push(it);
-          }
-        });
-      }
-    }
-  }
-
-  // FALLBACK ROBUSTO DE SEGURANÇA:
-  // Se a divisão por regex de seções falhar por causa de formatação do PDF, escaneia todas as linhas do documento buscando reagentes/kits válidos!
-  if (reagentesEncontrados.length === 0) {
-    const todasLinhas = textoNorm.split(/[\r\n]+/);
-    let origemAtual: ReagenteItem['origemBancada'] = 'Bancada do Aluno';
-
-    for (let linha of todasLinhas) {
-      linha = linha.trim();
-      if (!linha || linha.length < 3) continue;
-
-      if (/BANCADA\s+DE\s+APOIO/i.test(linha)) {
-        origemAtual = 'Bancada de Apoio';
-        continue;
-      }
-
-      if (eLinhaDescartavelOuCabecalho(linha)) continue;
-
-      if (eReagenteOuQuimicoValido(linha)) {
-        const extraidos = extrairLinhaSolutosOuQuimicos(linha, origemAtual);
         extraidos.forEach(it => {
           if (!reagentesEncontrados.some(r => r.nome.toLowerCase() === it.nome.toLowerCase())) {
             reagentesEncontrados.push(it);
