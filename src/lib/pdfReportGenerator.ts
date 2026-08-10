@@ -142,6 +142,7 @@ export function gerarPdfRelatorioReagentes(
         .tag-reactive { background-color: #fef3c7; color: #78350f; border: 1px solid #fde68a; }
         .tag-indicator { background-color: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
         .tag-kit { background-color: #e0e7ff; color: #3730a3; border: 1px solid #c7d2fe; }
+        .tag-pharmaceutical { background-color: #f3e8ff; color: #6b21a8; border: 1px solid #e9d5ff; }
         .script-list {
           margin: 4px 0 0 0;
           padding-left: 14px;
@@ -213,7 +214,7 @@ export function gerarPdfRelatorioReagentes(
                 <td><strong>${idx + 1}</strong></td>
                 <td>
                   <span class="reagent-name">${item.nome}</span>
-                  ${item.categoria ? `<span class="tag-cat ${item.categoria === 'Kit de Ensaio / Diagnóstico' ? 'tag-kit' : item.categoria === 'Ácido / Base' ? 'tag-acid' : item.categoria === 'Indicador / Corante' ? 'tag-indicator' : 'tag-reactive'}">${item.categoria}</span>` : ''}
+                  ${item.categoria ? `<span class="tag-cat ${item.categoria === 'Fármaco / Medicamento' ? 'tag-pharmaceutical' : item.categoria === 'Kit de Ensaio / Diagnóstico' ? 'tag-kit' : item.categoria === 'Ácido / Base' ? 'tag-acid' : item.categoria === 'Indicador / Corante' ? 'tag-indicator' : 'tag-reactive'}">${item.categoria}</span>` : ''}
                 </td>
                 <td>
                   <strong>${item.concentracao || 'Não inf.'}</strong>

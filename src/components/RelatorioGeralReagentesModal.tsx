@@ -406,11 +406,13 @@ export const RelatorioGeralReagentesModal: React.FC<RelatorioGeralReagentesModal
                                 <span 
                                   className="px-2 py-0.5 rounded-md text-[10px] font-extrabold border"
                                   style={
-                                    item.categoria === 'Kit de Ensaio / Diagnóstico'
-                                      ? { backgroundColor: '#e0e7ff', color: '#3730a3', borderColor: '#c7d2fe' }
-                                      : item.categoria === 'Ácido / Base'
-                                        ? { backgroundColor: '#ffe4e6', color: '#be123c', borderColor: '#fecdd3' }
-                                        : { backgroundColor: '#fef3c7', color: '#78350f', borderColor: '#fde68a' }
+                                    item.categoria === 'Fármaco / Medicamento'
+                                      ? { backgroundColor: '#f3e8ff', color: '#6b21a8', borderColor: '#e9d5ff' }
+                                      : item.categoria === 'Kit de Ensaio / Diagnóstico'
+                                        ? { backgroundColor: '#e0e7ff', color: '#3730a3', borderColor: '#c7d2fe' }
+                                        : item.categoria === 'Ácido / Base'
+                                          ? { backgroundColor: '#ffe4e6', color: '#be123c', borderColor: '#fecdd3' }
+                                          : { backgroundColor: '#fef3c7', color: '#78350f', borderColor: '#fde68a' }
                                   }
                                 >
                                   {item.categoria}

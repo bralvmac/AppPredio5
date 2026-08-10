@@ -7,7 +7,7 @@ export interface ReagenteItem {
   origemBancada?: 'Bancada do Aluno' | 'Bancada de Apoio' | 'Geral';
   concentracao?: string;
   observacoes?: string;
-  categoria?: 'Ácido / Base' | 'Solução Reativa' | 'Indicador / Corante' | 'Kit de Ensaio / Diagnóstico' | 'Solvente / Diluente' | 'Geral';
+  categoria?: 'Ácido / Base' | 'Solução Reativa' | 'Indicador / Corante' | 'Kit de Ensaio / Diagnóstico' | 'Fármaco / Medicamento' | 'Solvente / Diluente' | 'Geral';
 }
 
 export interface ResultadoAnaliseReagentes {
@@ -20,21 +20,19 @@ export interface ResultadoAnaliseReagentes {
 }
 
 /**
- * Filtro estrito para descartar:
- * 1. Cabeçalhos de tabelas e enunciados
- * 2. Vidrarias, utensílios, equipamentos físicos e amostras biológicas humanas
- * 3. Meios de cultura, bactérias, solução salina, solução de limpeza, placa de petri
- * 4. Instruções e procedimentos do aluno
+ * Filtro estrito para descartar vidrarias e equipamentos físicos sem componentes químicos ou farmacêuticos
  */
 function eLinhaDescartavelOuCabecalho(linha: string): boolean {
   if (!linha || linha.length < 2) return true;
 
-  // Descarta cabeçalhos da tabela USF (ex: "• Materiais • Reagentes • Equipamentos Quant.")
+  if (/dever[áa]|espalhar|apertar|procedimento|objetivo|aluno\s+\d+|equipe|discutir|responder|calcular/i.test(linha)) {
+    return true;
+  }
+
   if (/•?\s*Materiais\s*•?\s*Reagentes\s*•?\s*Equipamentos/i.test(linha)) return true;
   if (/^(?:materiais|reagentes|equipamentos|quant\.?|quantidade|\bullet)$/i.test(linha)) return true;
   if (/^DISPONIBILIZA[ÇC][ÃA]O/i.test(linha)) return true;
 
-  // Exclusão de insumos não químicos solicitada pelo usuário
   const itensNaoQuimicosExcluidos = [
     /meio[s]?\s+de\s+cultura/i, /[áa]gar/i, /agar/i, /caldo/i, /peptona/i, /macconkey/i, /sabouraud/i, /tsa\b/i, /nutritivo/i,
     /bact[ée]ria/i, /microrganismo/i, /col[ôo]nia/i, /ufc/i, /suspens[ãa]o bacteriana/i, /cepa/i, /cultura/i,
@@ -47,39 +45,44 @@ function eLinhaDescartavelOuCabecalho(linha: string): boolean {
     return true;
   }
 
-  // Descarta vidrarias, equipamentos físicos e amostras biológicas humanas
   const equipamentosFisicosEAmostras = [
     /micropipeta/i, /ponteira/i, /espectrofot[ôo]metro/i, /banho-maria/i, /banho maria/i,
     /bal[ãa]o volum[ée]trico/i, /b[ée]quer/i, /erlenmeyer/i, /funil/i,
     /bast[ãa]o de vidro/i, /pipeta/i, /proveta/i, /tubo[s]? de ensaio/i,
     /gaze/i, /pipetador/i, /bureta/i, /pin[çc]a/i, /suporte universal/i,
-    /bico de bunsen/i, /luva/i, /garrote/i, /peneira/i, /papel filtro/i, /pisseta/i,
+    /bico de bunsen/i, /luva/i, /garrote/i, /peneira/i, /papel filtro/i, /papel para pesagem/i, /pisseta/i,
     /balan[çc]a/i, /recipiente para pesagem/i, /rel[óo]gio de vidro/i,
     /estante/i, /tesoura/i, /bisturi/i, /al[çc]a/i, /esp[áa]tula/i, /suporte/i,
     /amostra biol[óo]gica/i, /sangue humano/i, /urina humana/i, /saliva/i
   ];
 
-  const temProdutoQuimicoOuKit = /kit|ensaio|enzim[áa]tico|liquiform|labtest|bioclin|doles|kovalent|wiener|gold analisa|ref\.?\s*\d+|colesterol|triglic[ée]rides|triglicer[íi]deos|glicose|glicemia|ur[ée]ia|creatinina|transaminases|tgo|tgp|prote[íi]nas|solutos?:|[áa]cido|hidr[óo]xido|reativo|indicador|lugol|alaranjado|cloreto\s+de|sulfato\s+de|amido|ninhidrina|benedict|biureto|turk|naoh|hcl|h2so4|hno3|nacl\b|cuso4\b/i.test(linha);
+  const temQuimicoFarmacoOuKit = /furosemida|paracetamol|dipirona|ibuprofeno|aspirina|omeprazol|amoxicilina|atenolol|propranolol|losartana|captopril|enalapril|hidroclorotiazida|simvastatina|metformina|glibenclamida|diazepam|lorazepam|fluoxetina|sertralina|carbamazepina|fenobarbital|prednisona|dexametasona|diclofenaco|nimesulida|cetoprofeno|ranitidina|cimetidina|metoclopramida|albendazol|mebendazol|ivermectina|azitromicina|cefalexina|ciprofloxacino|sulfametoxazol|trimetoprima|f[áa]rmaco|medicamento|rem[ée]dio|princ[íi]pio ativo|padr[ãa]o|amostra|kit|ensaio|enzim[áa]tico|liquiform|labtest|bioclin|doles|kovalent|wiener|gold analisa|ref\.?\s*\d+|colesterol|triglic[ée]rides|triglicer[íi]deos|glicose|glicemia|ur[ée]ia|creatinina|transaminases|tgo|tgp|prote[íi]nas|solutos?:|[áa]cido|hidr[óo]xido|reativo|indicador|lugol|alaranjado|cloreto\s+de|sulfato\s+de|amido|ninhidrina|benedict|biureto|turk|naoh|hcl|h2so4|hno3|nacl\b|cuso4\b/i.test(linha);
 
-  return equipamentosFisicosEAmostras.some(regex => regex.test(linha)) && !temProdutoQuimicoOuKit;
+  return equipamentosFisicosEAmostras.some(regex => regex.test(linha)) && !temQuimicoFarmacoOuKit;
 }
 
 /**
- * Valida se a string descreve um PRODUTO QUÍMICO, REAGENTE OU KIT DE ENSAIO ENZIMÁTICO
+ * Valida se a string descreve um PRODUTO QUÍMICO, REAGENTE, KIT OU FÁRMACO/MEDICAMENTO
  */
 function eReagenteOuQuimicoValido(nome: string): boolean {
-  if (!nome || nome.length < 3) return false;
+  if (!nome || nome.length < 2) return false;
   if (/meio|ágar|agar|caldo|bactéria|microrganismo|salina|fisiológica|detergente|limpeza|sangue humano|amostra biológica/i.test(nome)) {
     return false;
   }
 
-  const produtosQuimicosEKits = [
+  const produtosQuimicosFarmacosEKits = [
+    // Fármacos e Medicamentos
+    /furosemida/i, /paracetamol/i, /dipirona/i, /ibuprofeno/i, /aspirina/i, /omeprazol/i, /amoxicilina/i, /atenolol/i, /propranolol/i, /losartana/i, /captopril/i, /enalapril/i, /hidroclorotiazida/i, /simvastatina/i, /metformina/i, /glibenclamida/i, /diazepam/i, /lorazepam/i, /fluoxetina/i, /sertralina/i, /carbamazepina/i, /fenobarbital/i, /prednisona/i, /dexametasona/i, /diclofenaco/i, /nimesulida/i, /cetoprofeno/i, /ranitidina/i, /cimetidina/i, /metoclopramida/i, /albendazol/i, /mebendazol/i, /ivermectina/i, /azitromicina/i, /cefalexina/i, /ciprofloxacino/i, /sulfametoxazol/i, /trimetoprima/i,
+    /f[áa]rmaco/i, /medicamento/i, /rem[ée]dio/i, /princ[íi]pio ativo/i, /padr[ãa]o/i, /amostra/i,
+    // Kits e Diagnósticos
     /kit\b/i, /kit\s+de\s+ensaio/i, /kit\s+de\s+reagente/i, /kit\s+diagn[óo]stico/i, /kit\s+enzim[áa]tico/i, /ensaio/i, /enzim[áa]tic[oa]/i, /liquiform/i, /labtest/i, /bioclin/i, /doles/i, /kovalent/i, /wiener/i, /gold analisa/i, /ref\.?\s*\d+/i,
+    // Bioquímica
     /colesterol/i, /triglic[ée]rides/i, /triglicer[íi]deos/i, /glicose/i, /glicemia/i, /ur[ée]ia/i, /creatinina/i, /bilirrubina/i, /transaminases/i, /tgo/i, /tgp/i, /prote[íi]nas/i, /ácido úrico/i, /hemoglobina/i,
-    /padr[ãa]o/i, /solutos?:/i, /reagentes?:/i, /[áa]cido/i, /hidr[óo]xido/i, /reativo/i,
+    // Produtos Químicos Purificados
+    /solutos?:/i, /reagentes?:/i, /[áa]cido/i, /hidr[óo]xido/i, /reativo/i,
     /amido/i, /lactose/i, /sacarose/i, /fructose/i, /prote[íi]na/i, /albumina/i,
-    /corante/i, /indicador/i, /tamp[ãa]o/i, /[áa]lcool/i, /etanol/i, /metanol/i, /cloreto\s+de/i,
-    /sulfato\s+de/i, /nitrato\s+de/i, /acetato\s+de/i, /hipoclorito\s+de/i, /ninhidrina/i,
+    /corante/i, /indicador/i, /tamp[ãa]o/i, /[áa]lcool/i, /etanol/i, /metanol/i, /cloreto/i,
+    /sulfato/i, /nitrato/i, /acetato/i, /hipoclorito/i, /ninhidrina/i,
     /lugol/i, /alaranjado/i, /benedict/i, /biureto/i, /tollens/i, /barfoed/i, /fehling/i,
     /turk/i, /naoh/i, /hcl/i, /h2so4/i, /hno3/i, /nh4oh/i, /nacl\b/i, /cuso4\b/i,
     /soro\s+anti/i, /leishman/i, /giemsa/i, /formol/i, /alfa-naftol/i, /[áa]gua destilada/i
@@ -89,13 +92,16 @@ function eReagenteOuQuimicoValido(nome: string): boolean {
     return true;
   }
 
-  return produtosQuimicosEKits.some(regex => regex.test(nome));
+  return produtosQuimicosFarmacosEKits.some(regex => regex.test(nome));
 }
 
 /**
- * Classifica a categoria do produto ou kit
+ * Classifica a categoria do produto, kit ou fármaco
  */
 function classificarCategoria(nome: string): ReagenteItem['categoria'] {
+  if (/furosemida|paracetamol|dipirona|ibuprofeno|aspirina|omeprazol|amoxicilina|atenolol|propranolol|losartana|captopril|enalapril|hidroclorotiazida|simvastatina|metformina|glibenclamida|diazepam|lorazepam|fluoxetina|sertralina|carbamazepina|fenobarbital|prednisona|dexametasona|diclofenaco|nimesulida|cetoprofeno|ranitidina|cimetidina|metoclopramida|albendazol|mebendazol|ivermectina|azitromicina|cefalexina|ciprofloxacino|sulfametoxazol|trimetoprima|f[áa]rmaco|medicamento|rem[ée]dio|princ[íi]pio ativo/i.test(nome)) {
+    return 'Fármaco / Medicamento';
+  }
   if (/kit|ensaio|liquiform|labtest|bioclin|doles|ref\.?\s*\d+|colesterol|triglic[ée]rides|triglicer[íi]deos|glicose|glicemia|ur[ée]ia|creatinina|elisa|dosagem|diagn[óo]stico/i.test(nome)) {
     return 'Kit de Ensaio / Diagnóstico';
   }
@@ -106,6 +112,124 @@ function classificarCategoria(nome: string): ReagenteItem['categoria'] {
     return 'Indicador / Corante';
   }
   return 'Solução Reativa';
+}
+
+/**
+ * Limpa o nome do reagente evitando truncamentos de números ou concentracoes
+ */
+function limparSufixosEParanteses(nome: string): string {
+  let limpo = nome.trim();
+  
+  // Remove pontuações soltas ou traços no final/início
+  limpo = limpo
+    .replace(/[\(\[\s:–\-,]+$/, '')
+    .replace(/^[\)\]\s:–\-,]+/, '')
+    .trim();
+
+  // Fecha parênteses órfãos se necessário
+  if ((limpo.match(/\(/g) || []).length > (limpo.match(/\)/g) || []).length) {
+    limpo = limpo.replace(/\s*\([^)]*$/, '').trim();
+  }
+
+  return limpo;
+}
+
+/**
+ * Processa linhas numeradas da tabela
+ */
+function extrairItemNumerado(linha: string, origemBancada: ReagenteItem['origemBancada']): ReagenteItem[] {
+  const matchQtd = linha.match(/(\d+(?:[.,]\d+)?\s*(?:mL|ml|L|g|mg|gotas|tubos|frascos|litro|litros|unidades|unidade|caixa|pacote|frasco|frascos|kit|kits))\b/i);
+  let quantidade = matchQtd ? matchQtd[1].trim() : 'Conforme bancada';
+
+  if (!matchQtd) {
+    const matchNumFinal = linha.match(/\s+(\d+)\s*$/);
+    if (matchNumFinal) {
+      quantidade = `${matchNumFinal[1]} frasco(s)/unid.`;
+      linha = linha.replace(/\s+\d+\s*$/, '');
+    }
+  }
+
+  // Extrai concentração (ex: 0,1 M, 10%, 1 mol/L)
+  const matchConc = linha.match(/(\d+(?:[.,]\d+)?\s*(?:M\b|mol\/L|N\b|%))/i);
+  const concentracao = matchConc ? matchConc[1].trim() : undefined;
+
+  let nomeLimpo = linha;
+  if (matchQtd) nomeLimpo = nomeLimpo.replace(matchQtd[0], '');
+  if (concentracao) nomeLimpo = nomeLimpo.replace(concentracao, '');
+
+  nomeLimpo = nomeLimpo
+    .replace(/•?\s*Materiais\s*•?\s*Reagentes\s*•?\s*Equipamentos\s*Quant\.?/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  nomeLimpo = limparSufixosEParanteses(nomeLimpo);
+
+  if (!eReagenteOuQuimicoValido(nomeLimpo)) return [];
+
+  const categoria = classificarCategoria(nomeLimpo);
+
+  return [{
+    nome: nomeLimpo,
+    quantidade,
+    concentracao,
+    origemBancada,
+    categoria,
+    observacoes: `Solicitado na ${origemBancada}`
+  }];
+}
+
+/**
+ * Processa linhas soltas de substâncias, fármacos ou soluções (ex: "NaOH 0,1 M 2L" ou "FUROSEMIDA 5 g IDENTIFICADA COMO PADRÃO 5g")
+ */
+function extrairLinhaSolutosOuQuimicos(linha: string, origemBancada: ReagenteItem['origemBancada']): ReagenteItem[] {
+  let quantidade = 'Conforme bancada';
+  
+  // 1. Tenta encontrar a quantidade no final da linha (ex: "2L", "5g", "10 mL")
+  const matchQtd = linha.match(/(\d+(?:[.,]\d+)?\s*(?:mL|ml|L|g|mg|gotas|tubos|frascos|litro|litros|unidades|unidade|caixa|pacote|frasco|frascos|kit|kits))\s*$/i);
+
+  if (matchQtd) {
+    quantidade = matchQtd[1].trim();
+    linha = linha.substring(0, matchQtd.index).trim();
+  } else {
+    const matchNumFinal = linha.match(/\s+(\d+)\s*$/);
+    if (matchNumFinal) {
+      quantidade = `${matchNumFinal[1]} frasco(s)/unid.`;
+      linha = linha.replace(/\s+\d+\s*$/, '').trim();
+    }
+  }
+
+  // 2. Extrai concentração sem truncar o número do composto
+  let concentracao: string | undefined = undefined;
+  const matchConc = linha.match(/(\d+(?:[.,]\d+)?\s*(?:M\b|mol\/L|N\b|%))/i);
+  if (matchConc) {
+    concentracao = matchConc[1].trim();
+    // Remove apenas a palavra da concentração do nome mantendo a química íntegra
+    linha = linha.replace(matchConc[0], '').trim();
+  }
+
+  let textoSolutos = linha.replace(/^(?:solutos?|reagentes?)\s*:\s*/i, '').trim();
+  const partes = textoSolutos.split(/\s+e\s+|,\s*/i);
+  const reagentes: ReagenteItem[] = [];
+
+  for (const parte of partes) {
+    let nomeLimpo = parte.trim();
+    nomeLimpo = limparSufixosEParanteses(nomeLimpo);
+
+    if (nomeLimpo.length >= 2 && eReagenteOuQuimicoValido(nomeLimpo) && !eLinhaDescartavelOuCabecalho(nomeLimpo)) {
+      const categoria = classificarCategoria(nomeLimpo);
+
+      reagentes.push({
+        nome: nomeLimpo,
+        quantidade,
+        concentracao,
+        origemBancada,
+        categoria,
+        observacoes: `Solicitado na ${origemBancada}`
+      });
+    }
+  }
+
+  return reagentes;
 }
 
 /**
@@ -130,7 +254,7 @@ export async function analisarReagentesDoRoteiro(roteiro: Roteiro): Promise<Resu
         requerReagentes: true,
         roteiroTitulo: roteiro.titulo,
         reagentes: extraidos,
-        resumoGeral: `Foram identificados ${extraidos.length} reagente(s) / kit(s) de ensaio solicitados nas bancadas.`
+        resumoGeral: `Foram identificados ${extraidos.length} reagente(s) / fármaco(s) solicitados nas bancadas.`
       };
     }
   }
@@ -140,12 +264,12 @@ export async function analisarReagentesDoRoteiro(roteiro: Roteiro): Promise<Resu
     requerReagentes: false,
     roteiroTitulo: roteiro.titulo,
     reagentes: [],
-    resumoGeral: "Nenhum produto químico, reagente ou kit de ensaio foi solicitado nas seções 'Bancada do Aluno' ou 'Bancada de Apoio'."
+    resumoGeral: "Nenhum produto químico, reagente, fármaco ou kit foi solicitado nas seções 'Bancada do Aluno' ou 'Bancada de Apoio'."
   };
 }
 
 /**
- * RECONSTRUÇÃO GEOMÉTRICA DE LINHAS DE TABELA DO PDF:
+ * RECONSTRUÇÃO GEOMÉTRICA DE LINHAS DE TABELA DO PDF
  */
 async function extrairTextoDeUrlPdf(url: string): Promise<string> {
   pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
@@ -235,7 +359,7 @@ function extrairReagentesDasSecoesBancada(texto: string): ReagenteItem[] {
 
     for (let linha of linhas) {
       linha = linha.trim();
-      if (!linha || linha.length < 3) continue;
+      if (!linha || linha.length < 2) continue;
 
       if (eLinhaDescartavelOuCabecalho(linha)) continue;
 
@@ -250,7 +374,7 @@ function extrairReagentesDasSecoesBancada(texto: string): ReagenteItem[] {
         continue;
       }
 
-      // CASO 2: Linha de tabela dentro da seção de bancada que descreve produto químico ou kit
+      // CASO 2: Linha de tabela dentro da seção de bancada que descreve química, kit ou fármaco
       if (eReagenteOuQuimicoValido(linha)) {
         const extraidos = extrairLinhaSolutosOuQuimicos(linha, secao.origem);
         extraidos.forEach(it => {
@@ -267,98 +391,4 @@ function extrairReagentesDasSecoesBancada(texto: string): ReagenteItem[] {
     const numB = parseInt((b.nome.match(/Nº\s*(\d+)/i) || [])[1] || '0', 10);
     return numA - numB;
   });
-}
-
-function limparSufixosEParanteses(nome: string): string {
-  let limpo = nome.trim();
-  limpo = limpo.replace(/[\(\[\s:–\-,]+$/, '').trim();
-
-  if ((limpo.match(/\(/g) || []).length > (limpo.match(/\)/g) || []).length) {
-    limpo = limpo.replace(/\s*\([^)]*$/, '').trim();
-  }
-
-  return limpo;
-}
-
-function extrairItemNumerado(linha: string, origemBancada: ReagenteItem['origemBancada']): ReagenteItem[] {
-  const matchQtd = linha.match(/(\d+(?:[.,]\d+)?\s*(?:mL|ml|L|g|mg|gotas|tubos|frascos|litro|litros|unidades|unidade|caixa|pacote|frasco|frascos|kit|kits))\b/i);
-  let quantidade = matchQtd ? matchQtd[1].trim() : 'Conforme bancada';
-
-  if (!matchQtd) {
-    const matchNumFinal = linha.match(/\s+(\d+)\s*$/);
-    if (matchNumFinal) {
-      quantidade = `${matchNumFinal[1]} frasco(s)/unid.`;
-      linha = linha.replace(/\s+\d+\s*$/, '');
-    }
-  }
-
-  const matchConc = linha.match(/(\d+(?:[.,]\d+)?\s*(?:M\b|mol\/L|N\b|%))/i);
-  const concentracao = matchConc ? matchConc[1].trim() : undefined;
-
-  let nomeLimpo = linha;
-  if (matchQtd) nomeLimpo = nomeLimpo.replace(matchQtd[0], '');
-  if (concentracao) nomeLimpo = nomeLimpo.replace(concentracao, '');
-
-  nomeLimpo = nomeLimpo
-    .replace(/•?\s*Materiais\s*•?\s*Reagentes\s*•?\s*Equipamentos\s*Quant\.?/gi, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-
-  nomeLimpo = limparSufixosEParanteses(nomeLimpo);
-
-  if (!eReagenteOuQuimicoValido(nomeLimpo)) return [];
-
-  const categoria = classificarCategoria(nomeLimpo);
-
-  return [{
-    nome: nomeLimpo,
-    quantidade,
-    concentracao,
-    origemBancada,
-    categoria,
-    observacoes: `Solicitado na ${origemBancada}`
-  }];
-}
-
-function extrairLinhaSolutosOuQuimicos(linha: string, origemBancada: ReagenteItem['origemBancada']): ReagenteItem[] {
-  let quantidade = 'Conforme bancada';
-  const matchQtd = linha.match(/(\d+(?:[.,]\d+)?\s*(?:mL|ml|L|g|mg|gotas|tubos|frascos|litro|litros|unidades|unidade|caixa|pacote|frasco|frascos|kit|kits))\b/i);
-
-  if (matchQtd) {
-    quantidade = matchQtd[1].trim();
-    linha = linha.substring(0, matchQtd.index).trim();
-  } else {
-    const matchNumFinal = linha.match(/\s+(\d+)\s*$/);
-    if (matchNumFinal) {
-      quantidade = `${matchNumFinal[1]} frasco(s)/unid.`;
-      linha = linha.replace(/\s+\d+\s*$/, '').trim();
-    }
-  }
-
-  let textoSolutos = linha.replace(/^(?:solutos?|reagentes?)\s*:\s*/i, '').trim();
-  const partes = textoSolutos.split(/\s+e\s+|,\s*/i);
-  const reagentes: ReagenteItem[] = [];
-
-  for (const parte of partes) {
-    let nomeLimpo = parte.trim();
-    nomeLimpo = limparSufixosEParanteses(nomeLimpo);
-
-    if (nomeLimpo.length > 2 && eReagenteOuQuimicoValido(nomeLimpo) && !eLinhaDescartavelOuCabecalho(nomeLimpo)) {
-      const matchConc = nomeLimpo.match(/(\d+(?:[.,]\d+)?\s*(?:M\b|mol\/L|N\b|%))/i);
-      const concentracao = matchConc ? matchConc[1].trim() : undefined;
-
-      const categoria = classificarCategoria(nomeLimpo);
-
-      reagentes.push({
-        nome: nomeLimpo,
-        quantidade,
-        concentracao,
-        origemBancada,
-        categoria,
-        observacoes: `Solicitado na ${origemBancada}`
-      });
-    }
-  }
-
-  return reagentes;
 }
