@@ -7,7 +7,7 @@ export interface ReagenteItem {
   origemBancada?: 'Bancada do Aluno' | 'Bancada de Apoio' | 'Geral';
   concentracao?: string;
   observacoes?: string;
-  categoria?: 'Ácido / Base' | 'Solução Reativa' | 'Indicador / Corante' | 'Solvente / Diluente' | 'Geral';
+  categoria?: 'Ácido / Base' | 'Solução Reativa' | 'Indicador / Corante' | 'Kit de Ensaio / Diagnóstico' | 'Solvente / Diluente' | 'Geral';
 }
 
 export interface ResultadoAnaliseReagentes {
@@ -72,7 +72,7 @@ function eReagenteOuQuimicoValido(nome: string): boolean {
   }
 
   const produtosQuimicosEKits = [
-    /kit/i, /ensaio/i, /enzim[áa]tic[oa]/i, /liquiform/i, /labtest/i, /padr[ãa]o/i,
+    /kit\b/i, /kit\s+de\s+ensaio/i, /kit\s+de\s+reagente/i, /kit\s+diagn[óo]stico/i, /kit\s+enzim[áa]tico/i, /ensaio/i, /enzim[áa]tic[oa]/i, /liquiform/i, /labtest/i, /padr[ãa]o/i,
     /solutos?:/i, /reagentes?:/i, /[áa]cido/i, /hidr[óo]xido/i, /reativo/i,
     /glicose/i, /amido/i, /lactose/i, /sacarose/i, /fructose/i, /prote[íi]na/i, /albumina/i,
     /corante/i, /indicador/i, /tamp[ãa]o/i, /[áa]lcool/i, /etanol/i, /metanol/i, /cloreto\s+de/i,
@@ -83,6 +83,22 @@ function eReagenteOuQuimicoValido(nome: string): boolean {
   ];
 
   return produtosQuimicosEKits.some(regex => regex.test(nome));
+}
+
+/**
+ * Classifica a categoria do produto ou kit
+ */
+function classificarCategoria(nome: string): ReagenteItem['categoria'] {
+  if (/kit|ensaio|liquiform|labtest|elisa|dosagem|diagn[óo]stico/i.test(nome)) {
+    return 'Kit de Ensaio / Diagnóstico';
+  }
+  if (/ácido|hidr[óo]xido|hcl|naoh|h2so4/i.test(nome)) {
+    return 'Ácido / Base';
+  }
+  if (/indicador|lugol|fenolftale[íi]na|metileno|alaranjado/i.test(nome)) {
+    return 'Indicador / Corante';
+  }
+  return 'Solução Reativa';
 }
 
 /**
@@ -112,7 +128,6 @@ export async function analisarReagentesDoRoteiro(roteiro: Roteiro): Promise<Resu
     }
   }
 
-  // SEM FALLBACK DUMMY FALSO: Se o PDF não tiver reagentes na tabela de bancada, retorna falso limpo!
   return {
     sucesso: true,
     requerReagentes: false,
@@ -274,9 +289,7 @@ function extrairItemNumerado(linha: string, origemBancada: ReagenteItem['origemB
 
   if (!eReagenteOuQuimicoValido(nomeLimpo)) return [];
 
-  let categoria: ReagenteItem['categoria'] = 'Solução Reativa';
-  if (/ácido|hidr[óo]xido|hcl|naoh|h2so4/i.test(nomeLimpo)) categoria = 'Ácido / Base';
-  else if (/indicador|lugol|fenolftale[íi]na|metileno|alaranjado/i.test(nomeLimpo)) categoria = 'Indicador / Corante';
+  const categoria = classificarCategoria(nomeLimpo);
 
   return [{
     nome: nomeLimpo,
@@ -315,9 +328,7 @@ function extrairLinhaSolutosOuQuimicos(linha: string, origemBancada: ReagenteIte
       const matchConc = nomeLimpo.match(/(\d+(?:[.,]\d+)?\s*(?:M\b|mol\/L|N\b|%))/i);
       const concentracao = matchConc ? matchConc[1].trim() : undefined;
 
-      let categoria: ReagenteItem['categoria'] = 'Solução Reativa';
-      if (/ácido|hidr[óo]xido|hcl|naoh|h2so4/i.test(nomeLimpo)) categoria = 'Ácido / Base';
-      else if (/indicador|lugol|fenolftale[íi]na|metileno|alaranjado/i.test(nomeLimpo)) categoria = 'Indicador / Corante';
+      const categoria = classificarCategoria(nomeLimpo);
 
       reagentes.push({
         nome: nomeLimpo,
