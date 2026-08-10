@@ -10,9 +10,6 @@ import { Roteiro, FiltrosState, OpcoesFiltros } from './types/roteiro';
 import { buscarRoteiros, deletarRoteiro, supabase, isSupabaseConfigured } from './lib/supabaseClient';
 import { SearchX, Loader2, FolderTree, LayoutGrid } from 'lucide-react';
 
-/**
- * Remove acentos, diacríticos e converte para minúsculas para busca 100% insensível a acentuação e maiúsculas/minúsculas.
- */
 function normalizarTexto(str: string): string {
   if (!str) return '';
   return str
@@ -45,13 +42,20 @@ export const App: React.FC = () => {
     setTema(prev => (prev === 'dark' ? 'light' : 'dark'));
   };
 
-  // Modo de Visualização: 'pastas' (Estilo Gerenciador Windows/Pastas) ou 'grade' (Cards)
   const [modoVisualizacao, setModoVisualizacao] = useState<'pastas' | 'grade'>('pastas');
 
   // Modais
   const [roteiroSelecionado, setRoteiroSelecionado] = useState<Roteiro | null>(null);
   const [roteiroParaReagentes, setRoteiroParaReagentes] = useState<Roteiro | null>(null);
-  const [relatorioGeralModalAberto, setRelatorioGeralModalAberto] = useState<boolean>(false);
+  const [relatorioGeralModalState, setRelatorioGeralModalState] = useState<{
+    isOpen: boolean;
+    roteiros: Roteiro[];
+    tituloContexto: string;
+  }>({
+    isOpen: false,
+    roteiros: [],
+    tituloContexto: 'Relatório Geral do Laboratório'
+  });
   const [uploadModalAberto, setUploadModalAberto] = useState<boolean>(false);
 
   // Estado dos Filtros
@@ -65,7 +69,6 @@ export const App: React.FC = () => {
     tema: ''
   });
 
-  // Carrega os dados iniciais e escuta mudanças em Realtime
   useEffect(() => {
     async function carregarDados() {
       try {
@@ -81,7 +84,6 @@ export const App: React.FC = () => {
 
     carregarDados();
 
-    // Inscrição em Tempo Real (Supabase Realtime)
     if (isSupabaseConfigured && supabase) {
       const client = supabase;
       const channel = client
@@ -102,7 +104,6 @@ export const App: React.FC = () => {
     }
   }, []);
 
-  // Extrai listas ÚNICAS (sem duplicados) para popular os seletores dos filtros
   const opcoesFiltros = useMemo<OpcoesFiltros>(() => {
     const cursosSet = new Set<string>();
     const docentesSet = new Set<string>();
@@ -132,11 +133,9 @@ export const App: React.FC = () => {
     };
   }, [roteiros]);
 
-  // Algoritmo de filtragem com Busca Insensível a Acentuação, Maiúsculas/Minúsculas e Caracteres Especiais
   const roteirosFiltrados = useMemo(() => {
     const filtrados = roteiros.filter(r => {
       
-      // 1. Busca Geral Insensível a Acentos e Maiúsculas
       if (filtros.buscaGeral.trim()) {
         const termoNorm = normalizarTexto(filtros.buscaGeral);
         const conteudoNorm = normalizarTexto(
@@ -149,32 +148,26 @@ export const App: React.FC = () => {
         if (!correspondeTodosTermos) return false;
       }
 
-      // 2. Filtro de Curso
       if (filtros.curso && normalizarTexto(r.curso) !== normalizarTexto(filtros.curso)) {
         return false;
       }
 
-      // 3. Filtro de Tipo de Curso
       if (filtros.tipoCurso !== 'Todos' && normalizarTexto(r.tipoCurso) !== normalizarTexto(filtros.tipoCurso)) {
         return false;
       }
 
-      // 4. Filtro de Modelo de Componente
       if (filtros.modeloComponente !== 'Todos' && normalizarTexto(r.modeloComponente) !== normalizarTexto(filtros.modeloComponente)) {
         return false;
       }
 
-      // 5. Filtro de Docente / Tutor
       if (filtros.docente && normalizarTexto(r.docente) !== normalizarTexto(filtros.docente)) {
         return false;
       }
 
-      // 6. Filtro de Unidade Curricular (Disciplina)
       if (filtros.disciplina && normalizarTexto(r.disciplina) !== normalizarTexto(filtros.disciplina)) {
         return false;
       }
 
-      // 7. Filtro de Tema
       if (filtros.tema && normalizarTexto(r.tema) !== normalizarTexto(filtros.tema)) {
         return false;
       }
@@ -182,7 +175,6 @@ export const App: React.FC = () => {
       return true;
     });
 
-    // Ordena Alfabeticamente por Título
     return filtrados.sort((a, b) => 
       a.titulo.localeCompare(b.titulo, 'pt-BR', { numeric: true, sensitivity: 'base' })
     );
@@ -209,6 +201,22 @@ export const App: React.FC = () => {
     setRoteiros(prev => prev.filter(r => r.id !== id));
   };
 
+  const handleAbrirRelatorioGeral = () => {
+    setRelatorioGeralModalState({
+      isOpen: true,
+      roteiros: roteiros,
+      tituloContexto: 'Relatório Geral do Laboratório'
+    });
+  };
+
+  const handleAbrirRelatorioPasta = (roteirosPasta: Roteiro[], tituloContexto: string) => {
+    setRelatorioGeralModalState({
+      isOpen: true,
+      roteiros: roteirosPasta,
+      tituloContexto: tituloContexto
+    });
+  };
+
   const isDark = tema === 'dark';
 
   return (
@@ -216,10 +224,8 @@ export const App: React.FC = () => {
       isDark ? 'bg-slate-950 text-slate-100' : 'bg-slate-100 text-slate-900'
     }`}>
       
-      {/* Conteúdo Principal */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
         
-        {/* Busca, Filtros, Botão Cadastrar Roteiro, Botão Relatório Geral Reagentes e Botão de Tema */}
         <FiltrosBusca
           filtros={filtros}
           opcoes={opcoesFiltros}
@@ -227,12 +233,11 @@ export const App: React.FC = () => {
           onLimparFiltros={handleLimparFiltros}
           totalResultados={roteirosFiltrados.length}
           onOpenUploadModal={() => setUploadModalAberto(true)}
-          onOpenRelatorioGeralReagentes={() => setRelatorioGeralModalAberto(true)}
+          onOpenRelatorioGeralReagentes={handleAbrirRelatorioGeral}
           tema={tema}
           onToggleTema={toggleTema}
         />
 
-        {/* Alternador de Modo de Visualização (Pastas x Grade) */}
         {!carregando && roteirosFiltrados.length > 0 && (
           <div className="flex items-center justify-between mb-5">
             <span className={`text-xs font-black uppercase tracking-wider ${
@@ -273,7 +278,6 @@ export const App: React.FC = () => {
           </div>
         )}
 
-        {/* Estado de Carregando */}
         {carregando ? (
           <div className="flex flex-col items-center justify-center py-20 text-slate-400">
             <Loader2 className="w-10 h-10 animate-spin text-brand-400 mb-3" />
@@ -282,16 +286,15 @@ export const App: React.FC = () => {
         ) : roteirosFiltrados.length > 0 ? (
           
           modoVisualizacao === 'pastas' ? (
-            /* Visualização por Pastas (Estilo Gerenciador de Arquivos) */
             <PastaRoteirosView
               roteiros={roteirosFiltrados}
               onOpenPdf={setRoteiroSelecionado}
               onOpenReagentes={setRoteiroParaReagentes}
+              onOpenRelatorioPasta={handleAbrirRelatorioPasta}
               onDeletar={handleDeletarRoteiro}
               tema={tema}
             />
           ) : (
-            /* Grid de Roteiros Encontrados em Cards */
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-in">
               {roteirosFiltrados.map((roteiro) => (
                 <CardRoteiro
@@ -307,7 +310,6 @@ export const App: React.FC = () => {
 
         ) : (
 
-          /* Estado Sem Resultados */
           <div className={`rounded-2xl p-12 text-center max-w-lg mx-auto border my-8 shadow-md ${
             isDark ? 'glass-panel border-slate-800' : 'bg-white border-slate-300 text-slate-900'
           }`}>
@@ -334,29 +336,26 @@ export const App: React.FC = () => {
 
       </main>
 
-      {/* Modal Leitor de PDF */}
       <PdfModalViewer
         roteiro={roteiroSelecionado}
         onClose={() => setRoteiroSelecionado(null)}
         onOpenReagentes={setRoteiroParaReagentes}
       />
 
-      {/* Modal de Análise Individual de Reagentes */}
       <ReagentesModal
         roteiro={roteiroParaReagentes}
         onClose={() => setRoteiroParaReagentes(null)}
         isDark={isDark}
       />
 
-      {/* Modal de Relatório Geral de Reagentes de Todos os Roteiros */}
       <RelatorioGeralReagentesModal
-        isOpen={relatorioGeralModalAberto}
-        onClose={() => setRelatorioGeralModalAberto(false)}
-        roteiros={roteiros}
+        isOpen={relatorioGeralModalState.isOpen}
+        onClose={() => setRelatorioGeralModalState(prev => ({ ...prev, isOpen: false }))}
+        roteiros={relatorioGeralModalState.roteiros}
+        tituloContexto={relatorioGeralModalState.tituloContexto}
         isDark={isDark}
       />
 
-      {/* Modal de Upload de Roteiros */}
       <UploadModal
         isOpen={uploadModalAberto}
         onClose={() => setUploadModalAberto(false)}

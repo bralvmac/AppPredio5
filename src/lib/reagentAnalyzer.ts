@@ -7,7 +7,7 @@ export interface ReagenteItem {
   origemBancada?: 'Bancada do Aluno' | 'Bancada de Apoio' | 'Geral';
   concentracao?: string;
   observacoes?: string;
-  categoria?: 'Ácido / Base' | 'Solução Reativa' | 'Indicador / Corante' | 'Meio de Cultura' | 'Solvente / Diluente' | 'Geral';
+  categoria?: 'Ácido / Base' | 'Solução Reativa' | 'Indicador / Corante' | 'Solvente / Diluente' | 'Geral';
 }
 
 export interface ResultadoAnaliseReagentes {
@@ -20,7 +20,10 @@ export interface ResultadoAnaliseReagentes {
 }
 
 /**
- * Filtro estrito para descartar cabeçalhos de tabelas e vidrarias/equipamentos
+ * Filtro estrito para descartar:
+ * 1. Cabeçalhos de tabelas
+ * 2. Vidrarias, utensílios e equipamentos
+ * 3. Meios de cultura (Ágar/Caldo), bactérias/microrganismos, solução salina/fisiológica, solução de limpeza, placa de petri
  */
 function eLinhaDescartavelOuCabecalho(linha: string): boolean {
   if (!linha || linha.length < 2) return true;
@@ -30,47 +33,65 @@ function eLinhaDescartavelOuCabecalho(linha: string): boolean {
   if (/^(?:materiais|reagentes|equipamentos|quant\.?|quantidade|\bullet)$/i.test(linha)) return true;
   if (/^DISPONIBILIZA[ÇC][ÃA]O/i.test(linha)) return true;
 
-  // 2. Descarta vidrarias e utensílios sem substâncias químicas
+  // 2. EXCLUSÃO SOLICITADA PELO USUÁRIO:
+  // Meios de cultura, bactérias, solução salina, solução de limpeza, placa de petri, swabs, etc.
+  const itensNaoQuimicosExcluidos = [
+    /meio[s]?\s+de\s+cultura/i, /[áa]gar/i, /agar/i, /caldo/i, /peptona/i, /macconkey/i, /sabouraud/i, /tsa\b/i, /nutritivo/i,
+    /bact[ée]ria/i, /microrganismo/i, /col[ôo]nia/i, /ufc/i, /suspens[ãa]o bacteriana/i, /cepa/i, /cultura/i,
+    /solu[çc][ãa]o\s+salina/i, /solu[çc][ãa]o\s+fisiol[óo]gica/i, /nacl\s+0[,.]9%/i,
+    /solu[çc][ãa]o\s+de\s+limpeza/i, /detergente/i, /sabonete/i, /sab[ãa]o/i,
+    /placa\s+de\s+petri/i, /swab/i, /l[ãa]mina/i, /lam[íi]nula/i
+  ];
+
+  if (itensNaoQuimicosExcluidos.some(regex => regex.test(linha))) {
+    return true;
+  }
+
+  // 3. Descarta vidrarias e utensílios sem substâncias químicas puras
   const equipamentosFisicos = [
     /bal[ãa]o volum[ée]trico/i, /b[ée]quer/i, /erlenmeyer/i, /funil/i,
     /bast[ãa]o de vidro/i, /pipeta/i, /proveta/i, /tubo[s]? de ensaio/i,
     /gaze/i, /pipetador/i, /bureta/i, /pin[çc]a/i, /suporte universal/i,
-    /bico de bunsen/i, /placa de petri/i, /l[ãa]mina/i, /lam[íi]nula/i,
-    /luva/i, /garrote/i, /peneira/i, /papel filtro/i, /pisseta/i,
+    /bico de bunsen/i, /luva/i, /garrote/i, /peneira/i, /papel filtro/i, /pisseta/i,
     /balan[çc]a/i, /recipiente para pesagem/i, /rel[óo]gio de vidro/i,
     /estante/i, /tesoura/i, /bisturi/i, /al[çc]a/i, /esp[áa]tula/i, /suporte/i
   ];
 
-  const temReagenteOuQuimico = /solutos?:|solu[çc][ãa]o|ácido|hidr[óo]xido|reativo|indicador|lugol|alaranjado|cloreto|sulfato|glicose|amido|ninhidrina|benedict|biureto|turk|naoh|hcl|h2so4|hno3|nacl|cuso4/i.test(linha);
+  const temProdutoQuimicoPuro = /solutos?:|[áa]cido|hidr[óo]xido|reativo|indicador|lugol|alaranjado|cloreto\s+de|sulfato\s+de|glicose|amido|ninhidrina|benedict|biureto|turk|naoh|hcl|h2so4|hno3|nacl\b|cuso4\b/i.test(linha);
 
-  return equipamentosFisicos.some(regex => regex.test(linha)) && !temReagenteOuQuimico;
+  return equipamentosFisicos.some(regex => regex.test(linha)) && !temProdutoQuimicoPuro;
 }
 
 /**
- * Valida se a string descreve um produto químico ou reagente
+ * Valida se a string descreve estritamente um PRODUTO QUÍMICO OU REAGENTE
+ * (excluindo meios de cultura, bactérias, salina, detergente, etc.)
  */
 function eReagenteOuQuimicoValido(nome: string): boolean {
-  const palavrasChaveQuimicas = [
-    /solutos?:/i, /reagentes?:/i, /solu[çc][ãa]o/i, /[áa]cido/i, /hidr[óo]xido/i, /reativo/i,
-    /[áa]gar/i, /agar/i, /caldo/i, /glicose/i, /amido/i, /lactose/i, /sacarose/i, /fructose/i,
-    /prote[íi]na/i, /albumina/i, /corante/i, /indicador/i, /tamp[ãa]o/i, /[áa]lcool/i, /etanol/i,
-    /metanol/i, /cloreto/i, /sulfato/i, /nitrato/i, /acetato/i, /hipoclorito/i, /ninhidrina/i,
+  // Rejeita explicitamente se for meio de cultura, bactéria ou salina
+  if (/meio|ágar|agar|caldo|bactéria|microrganismo|salina|fisiológica|detergente|limpeza/i.test(nome)) {
+    return false;
+  }
+
+  const produtosQuimicosPuros = [
+    /solutos?:/i, /reagentes?:/i, /[áa]cido/i, /hidr[óo]xido/i, /reativo/i,
+    /glicose/i, /amido/i, /lactose/i, /sacarose/i, /fructose/i, /prote[íi]na/i, /albumina/i,
+    /corante/i, /indicador/i, /tamp[ãa]o/i, /[áa]lcool/i, /etanol/i, /metanol/i, /cloreto\s+de/i,
+    /sulfato\s+de/i, /nitrato\s+de/i, /acetato\s+de/i, /hipoclorito\s+de/i, /ninhidrina/i,
     /lugol/i, /alaranjado/i, /benedict/i, /biureto/i, /tollens/i, /barfoed/i, /fehling/i,
-    /turk/i, /naoh/i, /hcl/i, /h2so4/i, /hno3/i, /nh4oh/i, /nacl/i, /cuso4/i, /[áa]gua destilada/i,
-    /soro/i, /leishman/i, /giemsa/i, /formol/i, /alfa-naftol/i, /salina/i
+    /turk/i, /naoh/i, /hcl/i, /h2so4/i, /hno3/i, /nh4oh/i, /nacl\b/i, /cuso4\b/i,
+    /soro\s+anti/i, /leishman/i, /giemsa/i, /formol/i, /alfa-naftol/i, /[áa]gua destilada/i
   ];
 
-  return palavrasChaveQuimicas.some(regex => regex.test(nome));
+  return produtosQuimicosPuros.some(regex => regex.test(nome));
 }
 
 /**
- * Analisa o roteiro de aula prática buscando EXCLUSIVAMENTE nas seções
- * "BANCADA DO ALUNO" e "BANCADA DE APOIO"
+ * Analisa o roteiro de aula prática buscando EXCLUSIVAMENTE produtos químicos
+ * nas seções "BANCADA DO ALUNO" e "BANCADA DE APOIO"
  */
 export async function analisarReagentesDoRoteiro(roteiro: Roteiro): Promise<ResultadoAnaliseReagentes> {
   let textoPdf = '';
 
-  // 1. Extração do texto do PDF por Coordenadas Físicas (X, Y)
   if (roteiro.pdfUrl) {
     try {
       textoPdf = await extrairTextoDeUrlPdf(roteiro.pdfUrl);
@@ -79,7 +100,6 @@ export async function analisarReagentesDoRoteiro(roteiro: Roteiro): Promise<Resu
     }
   }
 
-  // 2. Extração focada EXCLUSIVAMENTE nas tabelas "BANCADA DO ALUNO / BANCADA DE APOIO"
   if (textoPdf && textoPdf.trim().length > 30) {
     const extraidos = extrairReagentesDasSecoesBancada(textoPdf);
     if (extraidos.length > 0) {
@@ -88,12 +108,11 @@ export async function analisarReagentesDoRoteiro(roteiro: Roteiro): Promise<Resu
         requerReagentes: true,
         roteiroTitulo: roteiro.titulo,
         reagentes: extraidos,
-        resumoGeral: `Foram identificados ${extraidos.length} reagente(s) e soluto(s) solicitados nas bancadas.`
+        resumoGeral: `Foram identificados ${extraidos.length} produto(s) químico(s) / reagente(s) solicitados nas bancadas.`
       };
     }
   }
 
-  // 3. Fallback inteligente direcionado caso o PDF esteja em imagem
   const inferidos = inferirReagentesPorTema(roteiro.titulo, roteiro.tema, roteiro.disciplina);
   if (inferidos.length > 0) {
     return {
@@ -101,23 +120,21 @@ export async function analisarReagentesDoRoteiro(roteiro: Roteiro): Promise<Resu
       requerReagentes: true,
       roteiroTitulo: roteiro.titulo,
       reagentes: inferidos,
-      resumoGeral: `Identificado preparo de reagentes para a bancada na aula de ${roteiro.tema || roteiro.titulo}.`
+      resumoGeral: `Identificado preparo de produtos químicos para a aula de ${roteiro.tema || roteiro.titulo}.`
     };
   }
 
-  // 4. Caso a aula não exija reagentes ou solutos nas bancadas
   return {
     sucesso: true,
     requerReagentes: false,
     roteiroTitulo: roteiro.titulo,
     reagentes: [],
-    resumoGeral: "Nenhum reagente químico ou soluto foi solicitado nas seções 'Bancada do Aluno' ou 'Bancada de Apoio'."
+    resumoGeral: "Nenhum produto químico ou reagente necessita de preparo prévio nas seções 'Bancada do Aluno' ou 'Bancada de Apoio'."
   };
 }
 
 /**
  * RECONSTRUÇÃO GEOMÉTRICA DE LINHAS DE TABELA DO PDF:
- * Agrupa os itens pelas coordenadas Y (linha da tabela) e X (coluna de quantidade).
  */
 async function extrairTextoDeUrlPdf(url: string): Promise<string> {
   pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
@@ -210,7 +227,7 @@ function extrairReagentesDasSecoesBancada(texto: string): ReagenteItem[] {
         continue;
       }
 
-      // CASO 2: Formato com "Solutos:", "Reagentes:" ou nomes de químicos (ex: "Solução de Turk (1 mL)")
+      // CASO 2: Formato com "Solutos:", "Reagentes:" ou nomes de químicos
       if ((/solutos?:|solu[çc][ãa]o\s+de/i.test(linha) || eReagenteOuQuimicoValido(linha)) && !eLinhaDescartavelOuCabecalho(linha)) {
         const extraidos = extrairLinhaSolutosOuQuimicos(linha, secao.origem);
         extraidos.forEach(it => {
@@ -229,16 +246,10 @@ function extrairReagentesDasSecoesBancada(texto: string): ReagenteItem[] {
   });
 }
 
-/**
- * Limpa o nome do reagente removendo parênteses abertos, vírgulas ou traços no final da frase
- */
 function limparSufixosEParanteses(nome: string): string {
   let limpo = nome.trim();
-
-  // Se o nome terminar com parentese aberto ou pontuações no final
   limpo = limpo.replace(/[\(\[\s:–\-,]+$/, '').trim();
 
-  // Se houver parentese aberto no texto sem o fechamento correspondente
   if ((limpo.match(/\(/g) || []).length > (limpo.match(/\)/g) || []).length) {
     limpo = limpo.replace(/\s*\([^)]*$/, '').trim();
   }
@@ -246,9 +257,6 @@ function limparSufixosEParanteses(nome: string): string {
   return limpo;
 }
 
-/**
- * Processa linhas numeradas da tabela (Formato "Nº 1 – Solução...")
- */
 function extrairItemNumerado(linha: string, origemBancada: ReagenteItem['origemBancada']): ReagenteItem[] {
   const matchQtd = linha.match(/(\d+(?:[.,]\d+)?\s*(?:mL|ml|L|g|mg|gotas|tubos|frascos|litro|litros|unidades|unidade|caixa|pacote|frasco|frascos))\b/i);
   let quantidade = matchQtd ? matchQtd[1].trim() : 'Conforme bancada';
@@ -275,6 +283,8 @@ function extrairItemNumerado(linha: string, origemBancada: ReagenteItem['origemB
 
   nomeLimpo = limparSufixosEParanteses(nomeLimpo);
 
+  if (!eReagenteOuQuimicoValido(nomeLimpo)) return [];
+
   let categoria: ReagenteItem['categoria'] = 'Solução Reativa';
   if (/ácido|hidr[óo]xido|hcl|naoh|h2so4/i.test(nomeLimpo)) categoria = 'Ácido / Base';
   else if (/indicador|lugol|fenolftale[íi]na|metileno|alaranjado/i.test(nomeLimpo)) categoria = 'Indicador / Corante';
@@ -289,9 +299,6 @@ function extrairItemNumerado(linha: string, origemBancada: ReagenteItem['origemB
   }];
 }
 
-/**
- * Processa linhas do tipo "Solução de Turk (1 mL)"
- */
 function extrairLinhaSolutosOuQuimicos(linha: string, origemBancada: ReagenteItem['origemBancada']): ReagenteItem[] {
   let quantidade = 'Conforme bancada';
   const matchQtd = linha.match(/(\d+(?:[.,]\d+)?\s*(?:mL|ml|L|g|mg|gotas|tubos|frascos|litro|litros|unidades|unidade|caixa|pacote|frasco|frascos))\b/i);
@@ -337,9 +344,6 @@ function extrairLinhaSolutosOuQuimicos(linha: string, origemBancada: ReagenteIte
   return reagentes;
 }
 
-/**
- * Inferência Inteligente por Tema como Fallback caso o PDF esteja escaneado em imagem
- */
 function inferirReagentesPorTema(titulo: string, tema: string, disciplina: string): ReagenteItem[] {
   const busca = `${titulo} ${tema} ${disciplina}`.toLowerCase();
 

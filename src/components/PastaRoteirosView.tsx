@@ -7,6 +7,7 @@ interface PastaRoteirosViewProps {
   roteiros: Roteiro[];
   onOpenPdf: (roteiro: Roteiro) => void;
   onOpenReagentes: (roteiro: Roteiro) => void;
+  onOpenRelatorioPasta?: (roteirosPasta: Roteiro[], tituloContexto: string) => void;
   onDeletar: (id: string, arquivoPath?: string) => void;
   tema?: 'dark' | 'light';
 }
@@ -20,12 +21,13 @@ export const PastaRoteirosView: React.FC<PastaRoteirosViewProps> = ({
   roteiros,
   onOpenPdf,
   onOpenReagentes,
+  onOpenRelatorioPasta,
   onDeletar,
   tema = 'dark'
 }) => {
   const isDark = tema === 'dark';
 
-  // Agrupa os roteiros por Curso e depois por Subpasta de Modalidade (Presencial / Semi-presencial)
+  // Agrupa os roteiros por Curso e depois por Subpasta de Modalidade
   const hierarquiaCursos = React.useMemo(() => {
     const cursosMap: { [curso: string]: EstruturaSubpastas } = {};
     
@@ -44,7 +46,6 @@ export const PastaRoteirosView: React.FC<PastaRoteirosViewProps> = ({
       cursosMap[cursoNome][tipoModalidade].push(r);
     });
 
-    // Ordenação Alfabética Natural por Título (A-Z) para os roteiros de cada subpasta
     Object.keys(cursosMap).forEach(curso => {
       cursosMap[curso]['Presencial'].sort((a, b) => 
         a.titulo.localeCompare(b.titulo, 'pt-BR', { numeric: true, sensitivity: 'base' })
@@ -57,7 +58,6 @@ export const PastaRoteirosView: React.FC<PastaRoteirosViewProps> = ({
     return cursosMap;
   }, [roteiros]);
 
-  // Estado de Abertura das Pastas Principais (Cursos) e Subpastas - RECOLHIDAS POR PADRÃO
   const [pastasCursoAbertas, setPastasCursoAbertas] = useState<{ [curso: string]: boolean }>({});
   const [subpastasAbertas, setSubpastasAbertas] = useState<{ [key: string]: boolean }>({});
 
@@ -99,7 +99,7 @@ export const PastaRoteirosView: React.FC<PastaRoteirosViewProps> = ({
   return (
     <div className="space-y-4 animate-fade-in w-full max-w-full overflow-hidden">
       
-      {/* Barra de Controle do Gerenciador de Pastas */}
+      {/* Barra de Controle da Árvore de Pastas */}
       <div className="flex flex-wrap items-center justify-between gap-2 px-1 py-1 text-xs">
         <span
           className="font-extrabold text-xs sm:text-sm flex items-center gap-1.5"
@@ -135,13 +135,14 @@ export const PastaRoteirosView: React.FC<PastaRoteirosViewProps> = ({
         </div>
       </div>
 
-      {/* Lista de Pastas Raiz (Cursos) - RECOLHIDAS POR PADRÃO */}
+      {/* Lista de Pastas de Cursos */}
       <div className="space-y-3.5 w-full">
         {listaCursos.map((cursoNome) => {
           const subpastas = hierarquiaCursos[cursoNome];
           const totalPresencial = subpastas['Presencial'].length;
           const totalSemi = subpastas['Semi-presencial'].length;
           const totalGeral = totalPresencial + totalSemi;
+          const todosRoteirosDoCurso = [...subpastas['Presencial'], ...subpastas['Semi-presencial']];
 
           const cursoAberto = Boolean(pastasCursoAbertas[cursoNome]);
 
@@ -156,15 +157,17 @@ export const PastaRoteirosView: React.FC<PastaRoteirosViewProps> = ({
             >
               
               {/* Pasta Principal do Curso (1º Nível) */}
-              <button
-                onClick={() => togglePastaCurso(cursoNome)}
-                className="w-full px-3.5 sm:px-5 py-3.5 sm:py-4 flex items-center justify-between text-left transition-colors cursor-pointer group select-none border-b"
+              <div
+                className="w-full px-3.5 sm:px-5 py-3.5 sm:py-4 flex items-center justify-between text-left transition-colors select-none border-b flex-wrap sm:flex-nowrap gap-3"
                 style={{
                   backgroundColor: isDark ? '#0f172a' : '#f8fafc',
                   borderColor: isDark ? '#1e293b' : '#e2e8f0'
                 }}
               >
-                <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0 flex-1 pr-2">
+                <div 
+                  onClick={() => togglePastaCurso(cursoNome)}
+                  className="flex items-center gap-2.5 sm:gap-3.5 min-w-0 flex-1 cursor-pointer group"
+                >
                   <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-500 group-hover:scale-105 transition-transform shrink-0">
                     {cursoAberto ? (
                       <FolderOpen className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -188,19 +191,41 @@ export const PastaRoteirosView: React.FC<PastaRoteirosViewProps> = ({
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+                <div className="flex items-center gap-2 sm:gap-3 shrink-0 ml-auto">
+                  {/* Botão NOVO: 🧪 Reagentes do Curso */}
+                  {onOpenRelatorioPasta && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onOpenRelatorioPasta(todosRoteirosDoCurso, `Curso: ${cursoNome}`);
+                      }}
+                      className="px-2.5 py-1 rounded-xl text-[10px] sm:text-xs font-extrabold border transition-all cursor-pointer flex items-center gap-1.5"
+                      style={
+                        isDark
+                          ? { backgroundColor: 'rgba(245, 158, 11, 0.15)', color: '#fbbf24', borderColor: 'rgba(245, 158, 11, 0.3)' }
+                          : { backgroundColor: '#fef3c7', color: '#78350f', borderColor: '#fde68a' }
+                      }
+                      title={`Gerar relatório de reagentes para o curso ${cursoNome}`}
+                    >
+                      <FlaskConical className="w-3.5 h-3.5" />
+                      <span>Reagentes do Curso</span>
+                    </button>
+                  )}
+
                   <span
                     className="px-2.5 py-1 rounded-xl text-[10px] sm:text-xs font-black border whitespace-nowrap"
                     style={
                       isDark
-                        ? { backgroundColor: 'rgba(245, 158, 11, 0.1)', color: '#fbbf24', borderColor: 'rgba(245, 158, 11, 0.2)' }
-                        : { backgroundColor: '#fef3c7', color: '#78350f', borderColor: '#fde68a' }
+                        ? { backgroundColor: 'rgba(16, 185, 129, 0.1)', color: '#34d399', borderColor: 'rgba(16, 185, 129, 0.2)' }
+                        : { backgroundColor: '#d1fae5', color: '#065f46', borderColor: '#a7f3d0' }
                     }
                   >
                     {totalGeral} {totalGeral === 1 ? 'roteiro' : 'roteiros'}
                   </span>
+                  
                   <div
-                    className="p-1 sm:p-1.5 rounded-lg border"
+                    onClick={() => togglePastaCurso(cursoNome)}
+                    className="p-1 sm:p-1.5 rounded-lg border cursor-pointer"
                     style={{
                       backgroundColor: isDark ? '#1e293b' : '#e2e8f0',
                       color: isDark ? '#cbd5e1' : '#0f172a',
@@ -210,9 +235,9 @@ export const PastaRoteirosView: React.FC<PastaRoteirosViewProps> = ({
                     {cursoAberto ? <ChevronDown className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
                   </div>
                 </div>
-              </button>
+              </div>
 
-              {/* Subpastas de Modalidade (2º Nível: Presencial e Semi-presencial) */}
+              {/* Subpastas de Modalidade (2º Nível) */}
               {cursoAberto && (
                 <div
                   className="p-2 sm:p-4 space-y-3 sm:pl-8 border-t w-full"
@@ -222,33 +247,35 @@ export const PastaRoteirosView: React.FC<PastaRoteirosViewProps> = ({
                   }}
                 >
                   
-                  {/* Subpasta 1: Presencial */}
                   {totalPresencial > 0 && (
                     <SubpastaModalidadeCard
                       chaveSubpasta={`${cursoNome}-Presencial`}
                       tituloModalidade="Presencial"
+                      cursoNome={cursoNome}
                       corTag="emerald"
                       roteiros={subpastas['Presencial']}
                       estaAberta={Boolean(subpastasAbertas[`${cursoNome}-Presencial`])}
                       onToggle={() => toggleSubpasta(`${cursoNome}-Presencial`)}
                       onOpenPdf={onOpenPdf}
                       onOpenReagentes={onOpenReagentes}
+                      onOpenRelatorioPasta={onOpenRelatorioPasta}
                       onDeletar={onDeletar}
                       isDark={isDark}
                     />
                   )}
 
-                  {/* Subpasta 2: Semi-presencial */}
                   {totalSemi > 0 && (
                     <SubpastaModalidadeCard
                       chaveSubpasta={`${cursoNome}-Semi-presencial`}
                       tituloModalidade="Semi-presencial"
+                      cursoNome={cursoNome}
                       corTag="indigo"
                       roteiros={subpastas['Semi-presencial']}
                       estaAberta={Boolean(subpastasAbertas[`${cursoNome}-Semi-presencial`])}
                       onToggle={() => toggleSubpasta(`${cursoNome}-Semi-presencial`)}
                       onOpenPdf={onOpenPdf}
                       onOpenReagentes={onOpenReagentes}
+                      onOpenRelatorioPasta={onOpenRelatorioPasta}
                       onDeletar={onDeletar}
                       isDark={isDark}
                     />
@@ -270,22 +297,26 @@ export const PastaRoteirosView: React.FC<PastaRoteirosViewProps> = ({
 const SubpastaModalidadeCard: React.FC<{
   chaveSubpasta: string;
   tituloModalidade: string;
+  cursoNome: string;
   corTag: 'emerald' | 'indigo';
   roteiros: Roteiro[];
   estaAberta: boolean;
   onToggle: () => void;
   onOpenPdf: (roteiro: Roteiro) => void;
   onOpenReagentes: (roteiro: Roteiro) => void;
+  onOpenRelatorioPasta?: (roteirosPasta: Roteiro[], tituloContexto: string) => void;
   onDeletar: (id: string, arquivoPath?: string) => void;
   isDark: boolean;
 }> = ({
   tituloModalidade,
+  cursoNome,
   corTag,
   roteiros,
   estaAberta,
   onToggle,
   onOpenPdf,
   onOpenReagentes,
+  onOpenRelatorioPasta,
   onDeletar,
   isDark
 }) => {
@@ -300,16 +331,18 @@ const SubpastaModalidadeCard: React.FC<{
       }}
     >
       
-      {/* Botão de Abrir/Fechar a Subpasta */}
-      <button
-        onClick={onToggle}
-        className="w-full px-3 py-2.5 sm:px-4 sm:py-3 flex items-center justify-between text-left transition-colors cursor-pointer group select-none border-b"
+      {/* Botão da Subpasta com Opção de Relatório Específico da Subpasta */}
+      <div
+        className="w-full px-3 py-2.5 sm:px-4 sm:py-3 flex items-center justify-between text-left transition-colors select-none border-b gap-2 flex-wrap sm:flex-nowrap"
         style={{
           backgroundColor: isDark ? '#1e293b' : '#f8fafc',
           borderColor: isDark ? '#334155' : '#e2e8f0'
         }}
       >
-        <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-2">
+        <div 
+          onClick={onToggle}
+          className="flex items-center gap-2.5 min-w-0 flex-1 cursor-pointer group"
+        >
           <div
             className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center border shrink-0"
             style={
@@ -333,7 +366,27 @@ const SubpastaModalidadeCard: React.FC<{
           </span>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2 shrink-0 ml-auto">
+          {/* Botão NOVO: 🧪 Reagentes desta Subpasta */}
+          {onOpenRelatorioPasta && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpenRelatorioPasta(roteiros, `${cursoNome} - ${tituloModalidade}`);
+              }}
+              className="px-2 py-1 rounded-lg text-[10px] sm:text-xs font-extrabold border transition-all cursor-pointer flex items-center gap-1"
+              style={
+                isDark
+                  ? { backgroundColor: 'rgba(245, 158, 11, 0.12)', color: '#fbbf24', borderColor: 'rgba(245, 158, 11, 0.25)' }
+                  : { backgroundColor: '#fef3c7', color: '#78350f', borderColor: '#fde68a' }
+              }
+              title={`Relatório de reagentes para ${cursoNome} (${tituloModalidade})`}
+            >
+              <FlaskConical className="w-3 h-3" />
+              <span>Reagentes Subpasta</span>
+            </button>
+          )}
+
           <span
             className="px-2 py-0.5 rounded-lg text-[10px] font-extrabold border whitespace-nowrap"
             style={
@@ -348,14 +401,16 @@ const SubpastaModalidadeCard: React.FC<{
           >
             {roteiros.length} {roteiros.length === 1 ? 'roteiro' : 'roteiros'}
           </span>
+
           <div
-            className="p-1 rounded-md"
+            onClick={onToggle}
+            className="p-1 rounded-md cursor-pointer"
             style={{ color: isDark ? '#94a3b8' : '#0f172a' }}
           >
             {estaAberta ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
           </div>
         </div>
-      </button>
+      </div>
 
       {/* Roteiros dentro da Subpasta (3º Nível) */}
       {estaAberta && (
@@ -383,7 +438,7 @@ const SubpastaModalidadeCard: React.FC<{
   );
 };
 
-// Linha Estilo Arquivo do Windows Explorer com Botão Reagentes
+// Linha Estilo Arquivo do Windows Explorer
 const ItemRoteiroArquivoRow: React.FC<{
   roteiro: Roteiro;
   onOpenPdf: (roteiro: Roteiro) => void;
@@ -440,7 +495,6 @@ const ItemRoteiroArquivoRow: React.FC<{
       }}
     >
       
-      {/* Nome, Modelo e Metadados com Quebra Total de Texto */}
       <div className="flex items-start gap-2.5 w-full">
         <div
           className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg border flex items-center justify-center shrink-0 mt-0.5"
@@ -455,7 +509,6 @@ const ItemRoteiroArquivoRow: React.FC<{
 
         <div className="min-w-0 flex-1 space-y-2">
           
-          {/* Título do Roteiro */}
           <div className="flex flex-wrap items-center gap-2">
             <span
               className="text-xs sm:text-sm font-black leading-snug break-words whitespace-normal"
@@ -464,7 +517,6 @@ const ItemRoteiroArquivoRow: React.FC<{
               {roteiro.titulo}
             </span>
 
-            {/* Badge Modelo Componente */}
             {roteiro.modeloComponente && (
               <span
                 className="inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] font-extrabold border shrink-0"
@@ -483,10 +535,7 @@ const ItemRoteiroArquivoRow: React.FC<{
             )}
           </div>
 
-          {/* Metadados Discriminados */}
           <div className="flex flex-col gap-1.5 text-xs pt-1 border-t" style={{ borderColor: isDark ? '#1e293b' : '#f1f5f9' }}>
-            
-            {/* Tema Completo */}
             <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5 w-full">
               <strong
                 className="font-black shrink-0"
@@ -502,7 +551,6 @@ const ItemRoteiroArquivoRow: React.FC<{
               </span>
             </div>
 
-            {/* Unidade Curricular Completa */}
             <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5 w-full">
               <strong
                 className="font-black shrink-0"
@@ -518,7 +566,6 @@ const ItemRoteiroArquivoRow: React.FC<{
               </span>
             </div>
 
-            {/* Docente / Tutor Completo */}
             {roteiro.docente && roteiro.docente !== 'Não informado' && (
               <div className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5 w-full">
                 <strong
@@ -535,19 +582,15 @@ const ItemRoteiroArquivoRow: React.FC<{
                 </span>
               </div>
             )}
-
           </div>
 
         </div>
       </div>
 
-      {/* Ações Rápidas em Linha Organizada */}
       <div
         className="flex items-center gap-1.5 sm:gap-2 w-full justify-end pt-2 border-t flex-wrap sm:flex-nowrap"
         style={{ borderColor: isDark ? '#1e293b' : '#e2e8f0' }}
       >
-        
-        {/* Visualizar PDF */}
         <button
           onClick={() => onOpenPdf(roteiro)}
           className="inline-flex items-center justify-center px-3 py-1.5 rounded-lg text-xs font-extrabold text-slate-950 bg-gradient-to-r from-emerald-400 to-teal-400 hover:from-emerald-300 hover:to-teal-300 transition-colors shadow-sm cursor-pointer mr-auto sm:mr-0"
@@ -556,7 +599,6 @@ const ItemRoteiroArquivoRow: React.FC<{
           <span>Visualizar</span>
         </button>
 
-        {/* Botão Novo: 🧪 Reagentes */}
         <button
           onClick={() => onOpenReagentes(roteiro)}
           className="inline-flex items-center justify-center px-3 py-1.5 rounded-lg text-xs font-extrabold transition-all shadow-sm cursor-pointer border"
@@ -571,7 +613,6 @@ const ItemRoteiroArquivoRow: React.FC<{
           <span>Reagentes</span>
         </button>
 
-        {/* Compartilhar WhatsApp */}
         <button
           onClick={handleCompartilharWhatsApp}
           className="p-1.5 rounded-lg border transition-colors cursor-pointer"
@@ -585,7 +626,6 @@ const ItemRoteiroArquivoRow: React.FC<{
           <MessageCircle className="w-3.5 h-3.5" />
         </button>
 
-        {/* Baixar PDF */}
         <button
           onClick={handleBaixarPdf}
           disabled={baixando}
@@ -600,7 +640,6 @@ const ItemRoteiroArquivoRow: React.FC<{
           {baixando ? <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-500" /> : <Download className="w-3.5 h-3.5" />}
         </button>
 
-        {/* Copiar Link */}
         <button
           onClick={handleCopiarLink}
           className="p-1.5 rounded-lg border transition-colors cursor-pointer"
@@ -614,7 +653,6 @@ const ItemRoteiroArquivoRow: React.FC<{
           {copiado ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Share2 className="w-3.5 h-3.5" />}
         </button>
 
-        {/* Excluir Roteiro */}
         <button
           onClick={(e) => {
             e.stopPropagation();
@@ -627,7 +665,6 @@ const ItemRoteiroArquivoRow: React.FC<{
         </button>
       </div>
 
-      {/* Confirmar Exclusão */}
       {confirmandoExclusao && (
         <div 
           className="absolute inset-0 z-20 backdrop-blur-md rounded-xl p-3 flex items-center justify-between gap-3 animate-fade-in border shadow-lg"

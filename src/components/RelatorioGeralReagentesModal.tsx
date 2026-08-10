@@ -1,27 +1,22 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { X, FlaskConical, Check, Copy, MessageCircle, Loader2, Search, Beaker, Sparkles, Building2, PackageCheck, Layers } from 'lucide-react';
+import { X, FlaskConical, Check, Copy, MessageCircle, Loader2, Search, Beaker, Sparkles, Building2, PackageCheck, Layers, Printer } from 'lucide-react';
 import { Roteiro } from '../types/roteiro';
 import { analisarReagentesDoRoteiro, ResultadoAnaliseReagentes, ReagenteItem } from '../lib/reagentAnalyzer';
+import { gerarPdfRelatorioReagentes, ItemConsolidadoPDF } from '../lib/pdfReportGenerator';
 
 interface RelatorioGeralReagentesModalProps {
   isOpen: boolean;
   onClose: () => void;
   roteiros: Roteiro[];
+  tituloContexto?: string;
   isDark?: boolean;
-}
-
-interface ItemConsolidado {
-  nome: string;
-  categoria?: ReagenteItem['categoria'];
-  concentracao?: string;
-  quantidades: { roteiroTitulo: string; curso: string; quantidade: string; origemBancada?: string }[];
-  totalOcorrencias: number;
 }
 
 export const RelatorioGeralReagentesModal: React.FC<RelatorioGeralReagentesModalProps> = ({
   isOpen,
   onClose,
   roteiros,
+  tituloContexto = 'Relatório Geral do Laboratório',
   isDark = true
 }) => {
   const [carregando, setCarregando] = useState(true);
@@ -55,8 +50,7 @@ export const RelatorioGeralReagentesModal: React.FC<RelatorioGeralReagentesModal
           console.warn(`Erro ao analisar reagentes do roteiro ${roteiro.titulo}:`, err);
         }
 
-        // Dá um pequeno alívio à UI para renderizar a barra de progresso suavemente
-        await new Promise(r => setTimeout(r, 15));
+        await new Promise(r => setTimeout(r, 10));
       }
 
       if (!cancelado) {
@@ -72,9 +66,9 @@ export const RelatorioGeralReagentesModal: React.FC<RelatorioGeralReagentesModal
     };
   }, [isOpen, roteiros]);
 
-  // Consolidação dos reagentes únicos de todo o sistema
-  const itensConsolidados = useMemo<ItemConsolidado[]>(() => {
-    const mapaItens = new Map<string, ItemConsolidado>();
+  // Consolidação dos reagentes únicos
+  const itensConsolidados = useMemo<ItemConsolidadoPDF[]>(() => {
+    const mapaItens = new Map<string, ItemConsolidadoPDF>();
 
     resultadosMap.forEach((res, idRoteiro) => {
       const roteiro = roteiros.find(r => r.id === idRoteiro);
@@ -107,7 +101,6 @@ export const RelatorioGeralReagentesModal: React.FC<RelatorioGeralReagentesModal
     return Array.from(mapaItens.values()).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
   }, [resultadosMap, roteiros]);
 
-  // Lista de reagentes filtrada pela busca interna do modal
   const itensConsolidadosFiltrados = useMemo(() => {
     if (!buscaReagente.trim()) return itensConsolidados;
 
@@ -119,7 +112,6 @@ export const RelatorioGeralReagentesModal: React.FC<RelatorioGeralReagentesModal
     );
   }, [itensConsolidados, buscaReagente]);
 
-  // Estatísticas do Relatório Geral
   const totalRoteirosComReagentes = useMemo(() => {
     let count = 0;
     resultadosMap.forEach(res => {
@@ -130,13 +122,19 @@ export const RelatorioGeralReagentesModal: React.FC<RelatorioGeralReagentesModal
 
   if (!isOpen) return null;
 
+  const handleGerarPdf = () => {
+    if (itensConsolidados.length === 0) return;
+    gerarPdfRelatorioReagentes(itensConsolidados, tituloContexto, roteiros.length);
+  };
+
   const handleCopiarRelatorioCompleto = () => {
     if (itensConsolidados.length === 0) return;
 
-    let texto = `🧪 *RELATÓRIO GERAL CONSOLIDADO DE REAGENTES DO LABORATÓRIO*\n`;
+    let texto = `🧪 *RELATÓRIO DE PRODUTOS QUÍMICOS E REAGENTES*\n`;
+    texto += `📌 *Contexto:* ${tituloContexto}\n`;
     texto += `📊 Total de Roteiros Analisados: ${roteiros.length}\n`;
     texto += `🔬 Roteiros com Solicitação de Reagentes: ${totalRoteirosComReagentes}\n`;
-    texto += `⚗️ Total de Substâncias/Reagentes Distintos: ${itensConsolidados.length}\n`;
+    texto += `⚗️ Total de Produtos Químicos Distintos: ${itensConsolidados.length}\n`;
     texto += `--------------------------------------------------\n\n`;
 
     itensConsolidados.forEach((item, idx) => {
@@ -159,8 +157,8 @@ export const RelatorioGeralReagentesModal: React.FC<RelatorioGeralReagentesModal
   const handleCompartilharWhatsApp = () => {
     if (itensConsolidados.length === 0) return;
 
-    let texto = `🧪 *RELATÓRIO GERAL DE REAGENTES E COMPRAS*\n\n`;
-    texto += `📊 *Resumo Geral:* ${itensConsolidados.length} reagentes distintos para ${totalRoteirosComReagentes} aulas práticas.\n\n`;
+    let texto = `🧪 *RELATÓRIO DE PRODUTOS QUÍMICOS - ${tituloContexto.toUpperCase()}*\n\n`;
+    texto += `📊 *Resumo:* ${itensConsolidados.length} produtos químicos distintos para ${totalRoteirosComReagentes} aulas práticas.\n\n`;
     texto += `*LISTA CONSOLIDADA:* \n`;
 
     itensConsolidados.forEach((item, idx) => {
@@ -201,31 +199,43 @@ export const RelatorioGeralReagentesModal: React.FC<RelatorioGeralReagentesModal
             </div>
             <div className="min-w-0">
               <h2 className="text-sm sm:text-base font-black truncate" style={{ color: isDark ? '#ffffff' : '#020617' }}>
-                Relatório Geral de Reagentes do Laboratório
+                Relatório de Produtos Químicos e Reagentes
               </h2>
-              <p className="text-xs font-semibold truncate" style={{ color: isDark ? '#94a3b8' : '#475569' }}>
-                Análise de todos os {roteiros.length} roteiros cadastrados no sistema
+              <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400 truncate">
+                {tituloContexto} ({roteiros.length} {roteiros.length === 1 ? 'roteiro' : 'roteiros'})
               </p>
             </div>
           </div>
 
-          <button
-            onClick={onClose}
-            className="p-2 rounded-xl border transition-colors cursor-pointer shrink-0"
-            style={{
-              backgroundColor: isDark ? '#0f172a' : '#e2e8f0',
-              borderColor: isDark ? '#334155' : '#cbd5e1',
-              color: isDark ? '#cbd5e1' : '#020617'
-            }}
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            {!carregando && itensConsolidados.length > 0 && (
+              <button
+                onClick={handleGerarPdf}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 text-xs font-extrabold hover:bg-emerald-500/25 transition-all cursor-pointer"
+                title="Gerar PDF para Impressão"
+              >
+                <Printer className="w-4 h-4 stroke-[2.5]" />
+                <span className="hidden sm:inline">Gerar PDF / Imprimir</span>
+              </button>
+            )}
+
+            <button
+              onClick={onClose}
+              className="p-2 rounded-xl border transition-colors cursor-pointer"
+              style={{
+                backgroundColor: isDark ? '#0f172a' : '#e2e8f0',
+                borderColor: isDark ? '#334155' : '#cbd5e1',
+                color: isDark ? '#cbd5e1' : '#020617'
+              }}
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Corpo do Modal */}
         <div className="p-5 flex-1 overflow-y-auto space-y-5">
           
-          {/* Estado de Carregando em Batch com Barra de Progresso */}
           {carregando ? (
             <div className="flex flex-col items-center justify-center py-16 space-y-5 text-center">
               <div className="relative">
@@ -234,7 +244,7 @@ export const RelatorioGeralReagentesModal: React.FC<RelatorioGeralReagentesModal
               </div>
               <div className="space-y-2 w-full max-w-md">
                 <h3 className="text-sm font-extrabold" style={{ color: isDark ? '#ffffff' : '#020617' }}>
-                  Analisando Todos os Roteiros... ({progresso.atual} de {progresso.total})
+                  Analisando Roteiros... ({progresso.atual} de {progresso.total})
                 </h3>
                 <div className="w-full bg-slate-200 dark:bg-slate-800 rounded-full h-3 overflow-hidden border border-slate-300 dark:border-slate-700">
                   <div 
@@ -243,13 +253,13 @@ export const RelatorioGeralReagentesModal: React.FC<RelatorioGeralReagentesModal
                   />
                 </div>
                 <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                  Extraindo seções de bancada de alunos e apoio de todos os PDFs... ({pctProgresso}%)
+                  Filtrando exclusivamente produtos químicos e reagentes... ({pctProgresso}%)
                 </p>
               </div>
             </div>
           ) : (
             <>
-              {/* Barra de Cards de Resumo e Estatísticas */}
+              {/* Barra de Cards de Resumo */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 
                 <div 
@@ -264,10 +274,10 @@ export const RelatorioGeralReagentesModal: React.FC<RelatorioGeralReagentesModal
                   </div>
                   <div>
                     <span className="text-[11px] font-bold" style={{ color: isDark ? '#94a3b8' : '#64748b' }}>
-                      Reagentes Distintos
+                      Produtos Químicos
                     </span>
                     <h4 className="text-base font-black" style={{ color: isDark ? '#ffffff' : '#020617' }}>
-                      {itensConsolidados.length} produtos
+                      {itensConsolidados.length} reagentes
                     </h4>
                   </div>
                 </div>
@@ -304,10 +314,10 @@ export const RelatorioGeralReagentesModal: React.FC<RelatorioGeralReagentesModal
                   </div>
                   <div>
                     <span className="text-[11px] font-bold" style={{ color: isDark ? '#94a3b8' : '#64748b' }}>
-                      Locais de Disponibilização
+                      Escopo do Relatório
                     </span>
-                    <h4 className="text-base font-black" style={{ color: isDark ? '#ffffff' : '#020617' }}>
-                      Bancada Aluno / Apoio
+                    <h4 className="text-xs font-black truncate max-w-[150px]" style={{ color: isDark ? '#ffffff' : '#020617' }} title={tituloContexto}>
+                      {tituloContexto}
                     </h4>
                   </div>
                 </div>
@@ -317,7 +327,6 @@ export const RelatorioGeralReagentesModal: React.FC<RelatorioGeralReagentesModal
               {/* Barra de Busca + Troca de Abas */}
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-2">
                 
-                {/* Abas de Visualização */}
                 <div className="flex rounded-xl p-1 border self-start" style={{
                   backgroundColor: isDark ? '#1e293b' : '#e2e8f0',
                   borderColor: isDark ? '#334155' : '#cbd5e1'
@@ -331,7 +340,7 @@ export const RelatorioGeralReagentesModal: React.FC<RelatorioGeralReagentesModal
                     }`}
                   >
                     <PackageCheck className="w-3.5 h-3.5" />
-                    <span>Visão Consolidada (Compras / Preparo)</span>
+                    <span>Visão Consolidada de Compras</span>
                   </button>
 
                   <button
@@ -347,7 +356,6 @@ export const RelatorioGeralReagentesModal: React.FC<RelatorioGeralReagentesModal
                   </button>
                 </div>
 
-                {/* Input de Busca Interno */}
                 <div className="relative flex-1 max-w-xs">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
                   <input
@@ -374,7 +382,7 @@ export const RelatorioGeralReagentesModal: React.FC<RelatorioGeralReagentesModal
 
               </div>
 
-              {/* CONTEÚDO DA ABA 1: VISÃO CONSOLIDADA */}
+              {/* ABA 1: VISÃO CONSOLIDADA */}
               {abaAtiva === 'consolidado' && (
                 <div className="space-y-3 pt-1">
                   {itensConsolidadosFiltrados.length > 0 ? (
@@ -413,7 +421,6 @@ export const RelatorioGeralReagentesModal: React.FC<RelatorioGeralReagentesModal
                             </span>
                           </div>
 
-                          {/* Lista de Aulas e Quantidades Solicitadas */}
                           <div className="pl-3 border-l-2 border-amber-500/40 space-y-1 text-xs">
                             {item.quantidades.map((q, qIdx) => (
                               <div key={qIdx} className="flex flex-wrap items-center justify-between gap-2 py-0.5">
@@ -438,13 +445,13 @@ export const RelatorioGeralReagentesModal: React.FC<RelatorioGeralReagentesModal
                     </div>
                   ) : (
                     <div className="text-center py-10 text-slate-400 text-xs">
-                      Nenhum reagente encontrado com o termo "{buscaReagente}".
+                      Nenhum produto químico encontrado com o termo "{buscaReagente}".
                     </div>
                   )}
                 </div>
               )}
 
-              {/* CONTEÚDO DA ABA 2: VISÃO POR ROTEIRO */}
+              {/* ABA 2: VISÃO POR ROTEIRO */}
               {abaAtiva === 'porRoteiro' && (
                 <div className="space-y-3 pt-1">
                   {roteiros.map(roteiro => {
@@ -470,7 +477,7 @@ export const RelatorioGeralReagentesModal: React.FC<RelatorioGeralReagentesModal
                             </p>
                           </div>
                           <span className="px-2 py-0.5 rounded-lg text-xs font-extrabold bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
-                            {res.reagentes.length} reagente(s)
+                            {res.reagentes.length} produto(s)
                           </span>
                         </div>
 
@@ -520,10 +527,18 @@ export const RelatorioGeralReagentesModal: React.FC<RelatorioGeralReagentesModal
             }}
           >
             <span className="text-xs font-bold text-slate-400">
-              Relatório compilado de todas as seções de bancada dos roteiros
+              Relatório de produtos químicos das bancadas ({tituloContexto})
             </span>
 
             <div className="flex items-center gap-2 ml-auto">
+              <button
+                onClick={handleGerarPdf}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-extrabold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 transition-all cursor-pointer"
+              >
+                <Printer className="w-4 h-4 stroke-[2.5]" />
+                <span>Gerar PDF / Imprimir</span>
+              </button>
+
               <button
                 onClick={handleCopiarRelatorioCompleto}
                 className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-extrabold border transition-all cursor-pointer"
@@ -534,7 +549,7 @@ export const RelatorioGeralReagentesModal: React.FC<RelatorioGeralReagentesModal
                 }}
               >
                 {copiado ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
-                <span>{copiado ? 'Copiado!' : 'Copiar Relatório Completo'}</span>
+                <span>{copiado ? 'Copiado!' : 'Copiar Texto'}</span>
               </button>
 
               <button
