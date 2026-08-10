@@ -21,19 +21,25 @@ export interface ResultadoAnaliseReagentes {
 
 /**
  * Filtro estrito para descartar:
- * 1. Cabeçalhos de tabelas
+ * 1. Cabeçalhos de tabelas e enunciados
  * 2. Vidrarias, utensílios, equipamentos físicos e amostras biológicas
  * 3. Meios de cultura, bactérias, solução salina, solução de limpeza
+ * 4. Passos procedimentais dos alunos ("aluno 1 deverá", "apertar a mão", etc.)
  */
 function eLinhaDescartavelOuCabecalho(linha: string): boolean {
   if (!linha || linha.length < 2) return true;
 
-  // 1. Descarta cabeçalhos da tabela USF (ex: "• Materiais • Reagentes • Equipamentos Quant.")
+  // Descarta passos e instruções procedimentais que não são lista de insumos
+  if (/dever[áa]|espalhar|apertar|procedimento|objetivo|aluno\s+\d+|equipe|discutir|responder|calcular/i.test(linha)) {
+    return true;
+  }
+
+  // Descarta cabeçalhos da tabela USF
   if (/•?\s*Materiais\s*•?\s*Reagentes\s*•?\s*Equipamentos/i.test(linha)) return true;
   if (/^(?:materiais|reagentes|equipamentos|quant\.?|quantidade|\bullet)$/i.test(linha)) return true;
   if (/^DISPONIBILIZA[ÇC][ÃA]O/i.test(linha)) return true;
 
-  // 2. Exclusão de itens não químicos (meios de cultura, bactérias, salina, limpeza, petri)
+  // Exclusão de insumos não químicos solicitada pelo usuário
   const itensNaoQuimicosExcluidos = [
     /meio[s]?\s+de\s+cultura/i, /[áa]gar/i, /agar/i, /caldo/i, /peptona/i, /macconkey/i, /sabouraud/i, /tsa\b/i, /nutritivo/i,
     /bact[ée]ria/i, /microrganismo/i, /col[ôo]nia/i, /ufc/i, /suspens[ãa]o bacteriana/i, /cepa/i, /cultura/i,
@@ -46,7 +52,7 @@ function eLinhaDescartavelOuCabecalho(linha: string): boolean {
     return true;
   }
 
-  // 3. Descarta vidrarias, equipamentos físicos e amostras biológicas humanas
+  // Descarta vidrarias, equipamentos físicos e amostras biológicas humanas
   const equipamentosFisicosEAmostras = [
     /micropipeta/i, /ponteira/i, /espectrofot[ôo]metro/i, /banho-maria/i, /banho maria/i,
     /bal[ãa]o volum[ée]trico/i, /b[ée]quer/i, /erlenmeyer/i, /funil/i,
@@ -58,7 +64,7 @@ function eLinhaDescartavelOuCabecalho(linha: string): boolean {
     /amostra biol[óo]gica/i, /sangue humano/i, /urina humana/i, /saliva/i
   ];
 
-  const temProdutoQuimicoOuKit = /kit|ensaio|enzim[áa]tico|liquiform|labtest|bioclin|doles|kovalent|wiener|gold analisa|ref\.?\s*\d+|colesterol|triglic[ée]rides|triglicer[íi]deos|glicose|glicemia|ur[ée]ia|creatinina|bilirrubina|transaminases|tgo|tgp|prote[íi]nas|solutos?:|[áa]cido|hidr[óo]xido|reativo|indicador|lugol|alaranjado|cloreto\s+de|sulfato\s+de|amido|ninhidrina|benedict|biureto|turk|naoh|hcl|h2so4|hno3|nacl\b|cuso4\b/i.test(linha);
+  const temProdutoQuimicoOuKit = /kit|ensaio|enzim[áa]tico|liquiform|labtest|bioclin|doles|kovalent|wiener|gold analisa|ref\.?\s*\d+|colesterol|triglic[ée]rides|triglicer[íi]deos|glicose|glicemia|ur[ée]ia|creatinina|transaminases|tgo|tgp|prote[íi]nas|solutos?:|[áa]cido|hidr[óo]xido|reativo|indicador|lugol|alaranjado|cloreto\s+de|sulfato\s+de|amido|ninhidrina|benedict|biureto|turk|naoh|hcl|h2so4|hno3|nacl\b|cuso4\b/i.test(linha);
 
   return equipamentosFisicosEAmostras.some(regex => regex.test(linha)) && !temProdutoQuimicoOuKit;
 }
@@ -67,6 +73,7 @@ function eLinhaDescartavelOuCabecalho(linha: string): boolean {
  * Valida se a string descreve um PRODUTO QUÍMICO, REAGENTE OU KIT DE ENSAIO ENZIMÁTICO
  */
 function eReagenteOuQuimicoValido(nome: string): boolean {
+  if (!nome || nome.length < 3) return false;
   if (/meio|ágar|agar|caldo|bactéria|microrganismo|salina|fisiológica|detergente|limpeza|sangue humano|amostra biológica/i.test(nome)) {
     return false;
   }
@@ -83,7 +90,6 @@ function eReagenteOuQuimicoValido(nome: string): boolean {
     /soro\s+anti/i, /leishman/i, /giemsa/i, /formol/i, /alfa-naftol/i, /[áa]gua destilada/i
   ];
 
-  // Se a linha estiver em uma seção de bancada, não for hardware nem mostra biológica e tiver Ref. ou marca diagnóstica
   if (/ref\.?\s*\d+/i.test(nome) || /labtest|bioclin|doles|kovalent/i.test(nome)) {
     return true;
   }
@@ -108,7 +114,7 @@ function classificarCategoria(nome: string): ReagenteItem['categoria'] {
 }
 
 /**
- * Analisa o roteiro de aula prática buscando EXCLUSIVAMENTE produtos químicos e kits nas bancadas
+ * Analisa o roteiro de aula prática buscando produtos químicos e kits nas bancadas
  */
 export async function analisarReagentesDoRoteiro(roteiro: Roteiro): Promise<ResultadoAnaliseReagentes> {
   let textoPdf = '';
@@ -188,7 +194,10 @@ async function extrairTextoDeUrlPdf(url: string): Promise<string> {
       
       let textoLinha = linha.items.map(it => it.str).join(' ');
       
+      // Normalização de traços Unicode (en-dash, em-dash, hífen) e espaços não-quebráveis
       textoLinha = textoLinha
+        .replace(/[\u2013\u2014\u2015\u2212]/g, '-')
+        .replace(/\u00A0/g, ' ')
         .replace(/\(\s*([A-Za-z]+)\s*(\d+)\s*([A-Za-z]*)\s*\)/g, '($1$2$3)')
         .replace(/\s+/g, ' ')
         .trim();
@@ -203,18 +212,29 @@ async function extrairTextoDeUrlPdf(url: string): Promise<string> {
 }
 
 /**
- * EXTRAÇÃO EXCLUSIVA DAS SEÇÕES "BANCADA DO ALUNO" E "BANCADA DE APOIO"
+ * EXTRAÇÃO DAS SEÇÕES "BANCADA DO ALUNO" E "BANCADA DE APOIO" COM FALLBACK ROBUSTO
  */
 function extrairReagentesDasSecoesBancada(texto: string): ReagenteItem[] {
   const reagentesEncontrados: ReagenteItem[] = [];
 
+  // Normaliza o texto total para garantir casamento de regex perfeito
+  const textoNorm = texto
+    .replace(/[\u2013\u2014\u2015\u2212]/g, '-')
+    .replace(/\u00A0/g, ' ');
+
   const secoes = [
-    { regex: /DISPONIBILIZA[ÇC][ÃA]O\s*[\s–-]\s*BANCADA\s+DO\s+ALUNO([\s\S]*?)(?=DISPONIBILIZA[ÇC][ÃA]O\s*[\s–-]\s*BANCADA\s+DE\s+APOIO|PROCEDIMENTOS?|COMPET[ÊE]NCIAS|OBJETIVOS|CONSIDERA[ÇC][ÕO]ES|$)/i, origem: 'Bancada do Aluno' as const },
-    { regex: /DISPONIBILIZA[ÇC][ÃA]O\s*[\s–-]\s*BANCADA\s+DE\s+APOIO([\s\S]*?)(?=DISPONIBILIZA[ÇC][ÃA]|PROCEDIMENTOS?|COMPET[ÊE]NCIAS|OBJETIVOS|CONSIDERA[ÇC][ÕO]ES|$)/i, origem: 'Bancada de Apoio' as const }
+    { 
+      regex: /DISPONIBILIZA[ÇC][ÃA]O\s*-?\s*BANCADA\s+DO\s+ALUNO([\s\S]*?)(?=DISPONIBILIZA[ÇC][ÃA]O\s*-?\s*BANCADA\s+DE\s+APOIO|PROCEDIMENTOS?|COMPET[ÊE]NCIAS|OBJETIVOS|CONSIDERA[ÇC][ÕO]ES|$)/i, 
+      origem: 'Bancada do Aluno' as const 
+    },
+    { 
+      regex: /DISPONIBILIZA[ÇC][ÃA]O\s*-?\s*BANCADA\s+DE\s+APOIO([\s\S]*?)(?=DISPONIBILIZA[ÇC][ÃA]|PROCEDIMENTOS?|COMPET[ÊE]NCIAS|OBJETIVOS|CONSIDERA[ÇC][ÕO]ES|$)/i, 
+      origem: 'Bancada de Apoio' as const 
+    }
   ];
 
   for (const secao of secoes) {
-    const matchSecao = texto.match(secao.regex);
+    const matchSecao = textoNorm.match(secao.regex);
     if (!matchSecao) continue;
 
     const blocoTexto = matchSecao[1];
@@ -237,9 +257,37 @@ function extrairReagentesDasSecoesBancada(texto: string): ReagenteItem[] {
         continue;
       }
 
-      // CASO 2: Qualquer linha da tabela que não seja vidraria/equipamento nem amostra biológica
-      if (!eLinhaDescartavelOuCabecalho(linha)) {
+      // CASO 2: Qualquer item válido que não seja vidraria/equipamento nem amostra biológica
+      if (eReagenteOuQuimicoValido(linha)) {
         const extraidos = extrairLinhaSolutosOuQuimicos(linha, secao.origem);
+        extraidos.forEach(it => {
+          if (!reagentesEncontrados.some(r => r.nome.toLowerCase() === it.nome.toLowerCase())) {
+            reagentesEncontrados.push(it);
+          }
+        });
+      }
+    }
+  }
+
+  // FALLBACK ROBUSTO DE SEGURANÇA:
+  // Se a divisão por regex de seções falhar por causa de formatação do PDF, escaneia todas as linhas do documento buscando reagentes/kits válidos!
+  if (reagentesEncontrados.length === 0) {
+    const todasLinhas = textoNorm.split(/[\r\n]+/);
+    let origemAtual: ReagenteItem['origemBancada'] = 'Bancada do Aluno';
+
+    for (let linha of todasLinhas) {
+      linha = linha.trim();
+      if (!linha || linha.length < 3) continue;
+
+      if (/BANCADA\s+DE\s+APOIO/i.test(linha)) {
+        origemAtual = 'Bancada de Apoio';
+        continue;
+      }
+
+      if (eLinhaDescartavelOuCabecalho(linha)) continue;
+
+      if (eReagenteOuQuimicoValido(linha)) {
+        const extraidos = extrairLinhaSolutosOuQuimicos(linha, origemAtual);
         extraidos.forEach(it => {
           if (!reagentesEncontrados.some(r => r.nome.toLowerCase() === it.nome.toLowerCase())) {
             reagentesEncontrados.push(it);
