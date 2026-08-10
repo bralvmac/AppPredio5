@@ -20,7 +20,7 @@ export interface ResultadoAnaliseReagentes {
 }
 
 /**
- * Filtro estrito para descartar vidrarias e equipamentos físicos sem componentes químicos ou farmacêuticos
+ * Filtro estrito para descartar vidrarias e equipamentos físicos sem componentes químicos, farmacêuticos ou cosmetológicos
  */
 function eLinhaDescartavelOuCabecalho(linha: string): boolean {
   if (!linha || linha.length < 2) return true;
@@ -56,13 +56,13 @@ function eLinhaDescartavelOuCabecalho(linha: string): boolean {
     /amostra biol[óo]gica/i, /sangue humano/i, /urina humana/i, /saliva/i
   ];
 
-  const temQuimicoFarmacoOuKit = /furosemida|paracetamol|dipirona|ibuprofeno|aspirina|omeprazol|amoxicilina|atenolol|propranolol|losartana|captopril|enalapril|hidroclorotiazida|simvastatina|metformina|glibenclamida|diazepam|lorazepam|fluoxetina|sertralina|carbamazepina|fenobarbital|prednisona|dexametasona|diclofenaco|nimesulida|cetoprofeno|ranitidina|cimetidina|metoclopramida|albendazol|mebendazol|ivermectina|azitromicina|cefalexina|ciprofloxacino|sulfametoxazol|trimetoprima|f[áa]rmaco|medicamento|rem[ée]dio|princ[íi]pio ativo|padr[ãa]o|amostra|kit|ensaio|enzim[áa]tico|liquiform|labtest|bioclin|doles|kovalent|wiener|gold analisa|ref\.?\s*\d+|colesterol|triglic[ée]rides|triglicer[íi]deos|glicose|glicemia|ur[ée]ia|creatinina|transaminases|tgo|tgp|prote[íi]nas|solutos?:|[áa]cido|hidr[óo]xido|reativo|indicador|lugol|alaranjado|cloreto\s+de|sulfato\s+de|amido|ninhidrina|benedict|biureto|turk|naoh|hcl|h2so4|hno3|nacl\b|cuso4\b/i.test(linha);
+  const temQuimicoFarmacoCosmeticoOuKit = /carb[ôo]mer|carbopol|ultrex|aristoflex|natrosol|hidroxietilcelulose|carboximetilcelulose|cmc|pol[íi]mero|edta|propilenoglicol|glicerina|glicerol|nipagin|nipazol|trietanolamina|vaselina|parafina|lanolina|[óo]leo mineral|cetoestear[íi]lico|lauril|polisorbato|tween|span|conservante|furosemida|paracetamol|dipirona|ibuprofeno|aspirina|omeprazol|amoxicilina|atenolol|propranolol|losartana|captopril|enalapril|hidroclorotiazida|simvastatina|metformina|glibenclamida|diazepam|lorazepam|fluoxetina|sertralina|carbamazepina|fenobarbital|prednisona|dexametasona|diclofenaco|nimesulida|cetoprofeno|ranitidina|cimetidina|metoclopramida|albendazol|mebendazol|ivermectina|azitromicina|cefalexina|ciprofloxacino|sulfametoxazol|trimetoprima|f[áa]rmaco|medicamento|rem[ée]dio|princ[íi]pio ativo|padr[ãa]o|amostra|kit|ensaio|enzim[áa]tico|liquiform|labtest|bioclin|doles|kovalent|wiener|gold analisa|ref\.?\s*\d+|colesterol|triglic[ée]rides|triglicer[íi]deos|glicose|glicemia|ur[ée]ia|creatinina|transaminases|tgo|tgp|prote[íi]nas|solutos?:|[áa]cido|hidr[óo]xido|reativo|indicador|lugol|alaranjado|cloreto\s+de|sulfato\s+de|amido|ninhidrina|benedict|biureto|turk|naoh|hcl|h2so4|hno3|nacl\b|cuso4\b/i.test(linha);
 
-  return equipamentosFisicosEAmostras.some(regex => regex.test(linha)) && !temQuimicoFarmacoOuKit;
+  return equipamentosFisicosEAmostras.some(regex => regex.test(linha)) && !temQuimicoFarmacoCosmeticoOuKit;
 }
 
 /**
- * Valida se a string descreve um PRODUTO QUÍMICO, REAGENTE, KIT OU FÁRMACO/MEDICAMENTO
+ * Valida se a string descreve um PRODUTO QUÍMICO, REAGENTE, INSUMO COSMETOLÓGICO OU FÁRMACO
  */
 function eReagenteOuQuimicoValido(nome: string): boolean {
   if (!nome || nome.length < 2) return false;
@@ -70,7 +70,10 @@ function eReagenteOuQuimicoValido(nome: string): boolean {
     return false;
   }
 
-  const produtosQuimicosFarmacosEKits = [
+  const produtosQuimicosFarmacosCosmeticosEKits = [
+    // Insumos Cosmetológicos, Excipientes e Polímeros
+    /carb[ôo]mer/i, /carbopol/i, /ultrex/i, /aristoflex/i, /natrosol/i, /hidroxietilcelulose/i, /carboximetilcelulose/i, /cmc\b/i, /pol[íi]mero/i,
+    /edta/i, /propilenoglicol/i, /glicerina/i, /glicerol/i, /nipagin/i, /nipazol/i, /trietanolamina/i, /vaselina/i, /parafina/i, /lanolina/i, /[óo]leo\s+mineral/i, /cetoestear[íi]lico/i, /lauril/i, /polisorbato/i, /tween/i, /span/i, /conservante/i,
     // Fármacos e Medicamentos
     /furosemida/i, /paracetamol/i, /dipirona/i, /ibuprofeno/i, /aspirina/i, /omeprazol/i, /amoxicilina/i, /atenolol/i, /propranolol/i, /losartana/i, /captopril/i, /enalapril/i, /hidroclorotiazida/i, /simvastatina/i, /metformina/i, /glibenclamida/i, /diazepam/i, /lorazepam/i, /fluoxetina/i, /sertralina/i, /carbamazepina/i, /fenobarbital/i, /prednisona/i, /dexametasona/i, /diclofenaco/i, /nimesulida/i, /cetoprofeno/i, /ranitidina/i, /cimetidina/i, /metoclopramida/i, /albendazol/i, /mebendazol/i, /ivermectina/i, /azitromicina/i, /cefalexina/i, /ciprofloxacino/i, /sulfametoxazol/i, /trimetoprima/i,
     /f[áa]rmaco/i, /medicamento/i, /rem[ée]dio/i, /princ[íi]pio ativo/i, /padr[ãa]o/i, /amostra/i,
@@ -92,11 +95,11 @@ function eReagenteOuQuimicoValido(nome: string): boolean {
     return true;
   }
 
-  return produtosQuimicosFarmacosEKits.some(regex => regex.test(nome));
+  return produtosQuimicosFarmacosCosmeticosEKits.some(regex => regex.test(nome));
 }
 
 /**
- * Classifica a categoria do produto, kit ou fármaco
+ * Classifica a categoria do produto, insumo, kit ou fármaco
  */
 function classificarCategoria(nome: string): ReagenteItem['categoria'] {
   if (/furosemida|paracetamol|dipirona|ibuprofeno|aspirina|omeprazol|amoxicilina|atenolol|propranolol|losartana|captopril|enalapril|hidroclorotiazida|simvastatina|metformina|glibenclamida|diazepam|lorazepam|fluoxetina|sertralina|carbamazepina|fenobarbital|prednisona|dexametasona|diclofenaco|nimesulida|cetoprofeno|ranitidina|cimetidina|metoclopramida|albendazol|mebendazol|ivermectina|azitromicina|cefalexina|ciprofloxacino|sulfametoxazol|trimetoprima|f[áa]rmaco|medicamento|rem[ée]dio|princ[íi]pio ativo/i.test(nome)) {
@@ -115,11 +118,14 @@ function classificarCategoria(nome: string): ReagenteItem['categoria'] {
 }
 
 /**
- * Limpa o nome do reagente evitando truncamentos de números ou concentracoes
+ * Limpa o nome do reagente removendo sufixos de equipamentos anexados na mesma célula (ex: "+ pipeta Pasteur")
  */
 function limparSufixosEParanteses(nome: string): string {
   let limpo = nome.trim();
   
+  // Limpa sufixos de vidrarias anexadas (ex: "+ pipeta Pasteur", "+ cálice de 10 mL")
+  limpo = limpo.replace(/\s*\+\s*(?:pipeta|c[áa]lice|proveta|b[ée]quer)[^,]*/gi, '').trim();
+
   // Remove pontuações soltas ou traços no final/início
   limpo = limpo
     .replace(/[\(\[\s:–\-,]+$/, '')
@@ -149,7 +155,6 @@ function extrairItemNumerado(linha: string, origemBancada: ReagenteItem['origemB
     }
   }
 
-  // Extrai concentração (ex: 0,1 M, 10%, 1 mol/L)
   const matchConc = linha.match(/(\d+(?:[.,]\d+)?\s*(?:M\b|mol\/L|N\b|%))/i);
   const concentracao = matchConc ? matchConc[1].trim() : undefined;
 
@@ -179,12 +184,11 @@ function extrairItemNumerado(linha: string, origemBancada: ReagenteItem['origemB
 }
 
 /**
- * Processa linhas soltas de substâncias, fármacos ou soluções (ex: "NaOH 0,1 M 2L" ou "FUROSEMIDA 5 g IDENTIFICADA COMO PADRÃO 5g")
+ * Processa linhas soltas de substâncias, excipientes ou soluções
  */
 function extrairLinhaSolutosOuQuimicos(linha: string, origemBancada: ReagenteItem['origemBancada']): ReagenteItem[] {
   let quantidade = 'Conforme bancada';
   
-  // 1. Tenta encontrar a quantidade no final da linha (ex: "2L", "5g", "10 mL")
   const matchQtd = linha.match(/(\d+(?:[.,]\d+)?\s*(?:mL|ml|L|g|mg|gotas|tubos|frascos|litro|litros|unidades|unidade|caixa|pacote|frasco|frascos|kit|kits))\s*$/i);
 
   if (matchQtd) {
@@ -198,12 +202,10 @@ function extrairLinhaSolutosOuQuimicos(linha: string, origemBancada: ReagenteIte
     }
   }
 
-  // 2. Extrai concentração sem truncar o número do composto
   let concentracao: string | undefined = undefined;
   const matchConc = linha.match(/(\d+(?:[.,]\d+)?\s*(?:M\b|mol\/L|N\b|%))/i);
   if (matchConc) {
     concentracao = matchConc[1].trim();
-    // Remove apenas a palavra da concentração do nome mantendo a química íntegra
     linha = linha.replace(matchConc[0], '').trim();
   }
 
@@ -254,7 +256,7 @@ export async function analisarReagentesDoRoteiro(roteiro: Roteiro): Promise<Resu
         requerReagentes: true,
         roteiroTitulo: roteiro.titulo,
         reagentes: extraidos,
-        resumoGeral: `Foram identificados ${extraidos.length} reagente(s) / fármaco(s) solicitados nas bancadas.`
+        resumoGeral: `Foram identificados ${extraidos.length} reagente(s) / insumo(s) solicitados nas bancadas.`
       };
     }
   }
@@ -264,7 +266,7 @@ export async function analisarReagentesDoRoteiro(roteiro: Roteiro): Promise<Resu
     requerReagentes: false,
     roteiroTitulo: roteiro.titulo,
     reagentes: [],
-    resumoGeral: "Nenhum produto químico, reagente, fármaco ou kit foi solicitado nas seções 'Bancada do Aluno' ou 'Bancada de Apoio'."
+    resumoGeral: "Nenhum produto químico, reagente, excipiente ou kit foi solicitado nas seções 'Bancada do Aluno' ou 'Bancada de Apoio'."
   };
 }
 
@@ -374,7 +376,7 @@ function extrairReagentesDasSecoesBancada(texto: string): ReagenteItem[] {
         continue;
       }
 
-      // CASO 2: Linha de tabela dentro da seção de bancada que descreve química, kit ou fármaco
+      // CASO 2: Linha de tabela dentro da seção de bancada que descreve química, excipiente ou fármaco
       if (eReagenteOuQuimicoValido(linha)) {
         const extraidos = extrairLinhaSolutosOuQuimicos(linha, secao.origem);
         extraidos.forEach(it => {
