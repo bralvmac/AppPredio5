@@ -56,7 +56,7 @@ function eLinhaDescartavelOuCabecalho(linha: string): boolean {
     /amostra biol[óo]gica/i, /sangue humano/i, /urina humana/i, /saliva/i
   ];
 
-  const temQuimicoFarmacoCosmeticoOuKit = /carb[ôo]mer|carbopol|ultrex|aristoflex|natrosol|hidroxietilcelulose|carboximetilcelulose|cmc|pol[íi]mero|edta|propilenoglicol|glicerina|glicerol|nipagin|nipazol|trietanolamina|vaselina|parafina|lanolina|[óo]leo mineral|cetoestear[íi]lico|lauril|polisorbato|tween|span|conservante|furosemida|paracetamol|dipirona|ibuprofeno|aspirina|omeprazol|amoxicilina|atenolol|propranolol|losartana|captopril|enalapril|hidroclorotiazida|simvastatina|metformina|glibenclamida|diazepam|lorazepam|fluoxetina|sertralina|carbamazepina|fenobarbital|prednisona|dexametasona|diclofenaco|nimesulida|cetoprofeno|ranitidina|cimetidina|metoclopramida|albendazol|mebendazol|ivermectina|azitromicina|cefalexina|ciprofloxacino|sulfametoxazol|trimetoprima|f[áa]rmaco|medicamento|rem[ée]dio|princ[íi]pio ativo|padr[ãa]o|amostra|kit|ensaio|enzim[áa]tico|liquiform|labtest|bioclin|doles|kovalent|wiener|gold analisa|ref\.?\s*\d+|colesterol|triglic[ée]rides|triglicer[íi]deos|glicose|glicemia|ur[ée]ia|creatinina|transaminases|tgo|tgp|prote[íi]nas|solutos?:|[áa]cido|hidr[óo]xido|reativo|indicador|lugol|alaranjado|cloreto\s+de|sulfato\s+de|amido|ninhidrina|benedict|biureto|turk|naoh|hcl|h2so4|hno3|nacl\b|cuso4\b/i.test(linha);
+  const temQuimicoFarmacoCosmeticoOuKit = /trietanolamina|carb[ôo]mer|carbopol|ultrex|aristoflex|natrosol|hidroxietilcelulose|carboximetilcelulose|cmc|pol[íi]mero|edta|propilenoglicol|glicerina|glicerol|nipagin|nipazol|vaselina|parafina|lanolina|[óo]leo mineral|cetoestear[íi]lico|lauril|polisorbato|tween|span|conservante|furosemida|paracetamol|dipirona|ibuprofeno|aspirina|omeprazol|amoxicilina|atenolol|propranolol|losartana|captopril|enalapril|hidroclorotiazida|simvastatina|metformina|glibenclamida|diazepam|lorazepam|fluoxetina|sertralina|carbamazepina|fenobarbital|prednisona|dexametasona|diclofenaco|nimesulida|cetoprofeno|ranitidina|cimetidina|metoclopramida|albendazol|mebendazol|ivermectina|azitromicina|cefalexina|ciprofloxacino|sulfametoxazol|trimetoprima|f[áa]rmaco|medicamento|rem[ée]dio|princ[íi]pio ativo|padr[ãa]o|amostra|kit|ensaio|enzim[áa]tico|liquiform|labtest|bioclin|doles|kovalent|wiener|gold analisa|ref\.?\s*\d+|colesterol|triglic[ée]rides|triglicer[íi]deos|glicose|glicemia|ur[ée]ia|creatinina|transaminases|tgo|tgp|prote[íi]nas|solutos?:|[áa]cido|hidr[óo]xido|reativo|indicador|lugol|alaranjado|cloreto\s+de|sulfato\s+de|amido|ninhidrina|benedict|biureto|turk|naoh|hcl|h2so4|hno3|nacl\b|cuso4\b/i.test(linha);
 
   return equipamentosFisicosEAmostras.some(regex => regex.test(linha)) && !temQuimicoFarmacoCosmeticoOuKit;
 }
@@ -72,8 +72,8 @@ function eReagenteOuQuimicoValido(nome: string): boolean {
 
   const produtosQuimicosFarmacosCosmeticosEKits = [
     // Insumos Cosmetológicos, Excipientes e Polímeros
-    /carb[ôo]mer/i, /carbopol/i, /ultrex/i, /aristoflex/i, /natrosol/i, /hidroxietilcelulose/i, /carboximetilcelulose/i, /cmc\b/i, /pol[íi]mero/i,
-    /edta/i, /propilenoglicol/i, /glicerina/i, /glicerol/i, /nipagin/i, /nipazol/i, /trietanolamina/i, /vaselina/i, /parafina/i, /lanolina/i, /[óo]leo\s+mineral/i, /cetoestear[íi]lico/i, /lauril/i, /polisorbato/i, /tween/i, /span/i, /conservante/i,
+    /trietanolamina/i, /carb[ôo]mer/i, /carbopol/i, /ultrex/i, /aristoflex/i, /natrosol/i, /hidroxietilcelulose/i, /carboximetilcelulose/i, /cmc\b/i, /pol[íi]mero/i,
+    /edta/i, /propilenoglicol/i, /glicerina/i, /glicerol/i, /nipagin/i, /nipazol/i, /vaselina/i, /parafina/i, /lanolina/i, /[óo]leo\s+mineral/i, /cetoestear[íi]lico/i, /lauril/i, /polisorbato/i, /tween/i, /span/i, /conservante/i,
     // Fármacos e Medicamentos
     /furosemida/i, /paracetamol/i, /dipirona/i, /ibuprofeno/i, /aspirina/i, /omeprazol/i, /amoxicilina/i, /atenolol/i, /propranolol/i, /losartana/i, /captopril/i, /enalapril/i, /hidroclorotiazida/i, /simvastatina/i, /metformina/i, /glibenclamida/i, /diazepam/i, /lorazepam/i, /fluoxetina/i, /sertralina/i, /carbamazepina/i, /fenobarbital/i, /prednisona/i, /dexametasona/i, /diclofenaco/i, /nimesulida/i, /cetoprofeno/i, /ranitidina/i, /cimetidina/i, /metoclopramida/i, /albendazol/i, /mebendazol/i, /ivermectina/i, /azitromicina/i, /cefalexina/i, /ciprofloxacino/i, /sulfametoxazol/i, /trimetoprima/i,
     /f[áa]rmaco/i, /medicamento/i, /rem[ée]dio/i, /princ[íi]pio ativo/i, /padr[ãa]o/i, /amostra/i,
@@ -118,13 +118,16 @@ function classificarCategoria(nome: string): ReagenteItem['categoria'] {
 }
 
 /**
- * Limpa o nome do reagente removendo sufixos de equipamentos anexados na mesma célula (ex: "+ pipeta Pasteur")
+ * Limpa o nome do reagente removendo sufixos de equipamentos anexados e preposições no final
  */
 function limparSufixosEParanteses(nome: string): string {
   let limpo = nome.trim();
   
-  // Limpa sufixos de vidrarias anexadas (ex: "+ pipeta Pasteur", "+ cálice de 10 mL")
+  // Limpa sufixos de vidrarias anexadas (ex: "+ pipeta Pasteur", "+ cálice de 10 mL", "+ pipeta de Pasteur")
   limpo = limpo.replace(/\s*\+\s*(?:pipeta|c[áa]lice|proveta|b[ée]quer)[^,]*/gi, '').trim();
+
+  // Limpa preposições órfãs deixadas ao remover a porcentagem/concentração (ex: "Solução de trietanolamina a" -> "Solução de trietanolamina")
+  limpo = limpo.replace(/\s+(?:a|de|da|do|em)\s*$/i, '').trim();
 
   // Remove pontuações soltas ou traços no final/início
   limpo = limpo
